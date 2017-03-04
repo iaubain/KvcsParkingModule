@@ -9,6 +9,7 @@ import com.kparking.oltranz.apiclient.ApInterface;
 import com.kparking.oltranz.apiclient.OpenExternal;
 import com.kparking.oltranz.config.ApiConfig;
 import com.kparking.oltranz.config.AppDesc;
+import com.kparking.oltranz.config.SMSConfig;
 import com.kparking.oltranz.config.StatusConfig;
 import com.kparking.oltranz.entities.CallBack;
 import com.kparking.oltranz.entities.Ticket;
@@ -28,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.ejb.EJB;
@@ -116,7 +118,7 @@ MyJob mJob = new MyJob(ticket.getTicketId(),
 
 createSchedule(mJob);
 
-Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, ticket, true, false, false));
+Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, ticket, SMSConfig.CAR_IN_MSG+ticket.getNumberPlate()+" "+ticket.getParkingDesc()+" / "+timestamp));
 smsThread.start();
 
 return true;
@@ -133,7 +135,8 @@ return true;
                 out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket Failed to generate ticket due to: no ticket found for : "+numberPlate);
                 return false;
             }
-             if(isCancelSched){
+            Date date = new Date();
+            if(isCancelSched){
                 CallBack callBack = callBackFacade.getCustormerLastCallback(numberPlate);
                 if(callBack != null){
                     MyJob mJob = new MyJob();
@@ -144,15 +147,15 @@ return true;
                     callBackFacade.edit(callBack);
                     callBackFacade.refreshCallBack();
                 }
-                
-                Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, oTicket, false, true, false));
+                DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");
+                Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, oTicket, SMSConfig.CAR_OUT_MSG+oTicket.getNumberPlate()+" "+oTicket.getParkingDesc()+"/"+dateFormat.format(date)));
                 smsThread.start();
             }
             if(oTicket.getOutDate() != null){
                 out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket ticket already timedout for: "+numberPlate);
                 return true;
             }
-            oTicket.setOutDate(new Date());
+            oTicket.setOutDate(date);
             ticketFacade.edit(oTicket);
             ticketFacade.refreshTicket();
             return true;
@@ -168,7 +171,7 @@ return true;
             MyJob mJob = new MyJob();
             mJob.setJobId(oldTicket);
             if(checkTicket == null){
-                //cancel the scheduler                
+                //cancel the scheduler
                 cancelSchedule(mJob);
                 out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket Failed to generate ticket due to: null old ticket from ticket id: "+oldTicket);
                 return false;
@@ -190,19 +193,20 @@ return true;
                 callBack.setNumberOfCallBack(callBack.getNumberOfCallBack()+1);
                 callBackFacade.edit(callBack);
                 callBackFacade.refreshCallBack();
-                out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket "+callBack.getNumberOfCallBack()+" callBack for this ticket: "+oldTicket);                                    
+                out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket "+callBack.getNumberOfCallBack()+" callBack for this ticket: "+oldTicket);
             }
-            
-            Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, checkTicket, false, false, true));
-            smsThread.start();
             
             Ticket oTicket = ticketFacade.getCustormerLastTicket(checkTicket.getNumberPlate());
             if(oTicket == null){
                 out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket Failed to generate ticket due to: no ticket found for : "+oldTicket);
                 return false;
             }
+            Date date = new Date();
             oTicket.setOutDate(new Date());
             ticketFacade.edit(oTicket);
+            long elapsedTime = elapsed(callBack.getCreatedOn(), date, TimeUnit.MINUTES);
+            Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, checkTicket, SMSConfig.CAR_ADDED_VALUE+" "+elapsedTime+" iminota irashize, minutes elapsed, minutes ecoule"+oTicket.getNumberPlate()+"/"+oTicket.getParkingDesc()));
+            smsThread.start();
             
             Ticket nTicket = new Ticket(idGenerator(),
                     oTicket.getNumberPlate(),
@@ -211,7 +215,7 @@ return true;
                     oTicket.getConductorName(),
                     oTicket.getParkingId(),
                     oTicket.getParkingDesc(),
-                    new Date(),
+                    date,
                     null);
             ticketFacade.create(nTicket);
             ticketFacade.refreshTicket();
@@ -220,6 +224,11 @@ return true;
             out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket Failed to generate ticket due to: "+e.getMessage());
             return false;
         }
+    }
+    
+    public static long elapsed(Date startDate, Date endDate, TimeUnit timeUnit) {
+        long diffInMillies = endDate.getTime() - startDate.getTime();
+        return timeUnit.convert(diffInMillies,TimeUnit.MINUTES);
     }
     
     private void createSchedule(MyJob mJob){

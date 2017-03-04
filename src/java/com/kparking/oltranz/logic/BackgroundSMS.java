@@ -6,7 +6,6 @@
 package com.kparking.oltranz.logic;
 
 import com.kparking.oltranz.config.AppDesc;
-import com.kparking.oltranz.config.SMSConfig;
 import com.kparking.oltranz.entities.Ticket;
 import static java.lang.System.out;
 import javax.ejb.EJB;
@@ -22,17 +21,14 @@ public class BackgroundSMS  implements Runnable{
     @EJB
             CustomerProvider customerProvider;
     Ticket ticket;
-    boolean isCarIn;
-    boolean isCarOut;
-    boolean isAddCharge;
     
-    public BackgroundSMS(SmsSender smsSender, CustomerProvider customerProvider, Ticket ticket, boolean isCarIn, boolean isCarOut, boolean isAddCharge) {
+    String message;
+    
+    public BackgroundSMS(SmsSender smsSender, CustomerProvider customerProvider, Ticket ticket, String message) {
         this.smsSender = smsSender;
         this.customerProvider = customerProvider;
         this.ticket = ticket;
-        this.isCarIn = isCarIn;
-        this.isCarOut = isCarOut;
-        this.isAddCharge = isAddCharge;
+        this.message = message;
     }
     
     @Override
@@ -42,12 +38,7 @@ public class BackgroundSMS  implements Runnable{
     
     private void exec(){
         try{
-            if(isCarIn)
-                smsSender.send(customerProvider.genMsisdn(ticket.getNumberPlate(), ticket.getMsisdn()), SMSConfig.CAR_IN_MSG+ticket.getParkingDesc());
-            if(isAddCharge)
-                smsSender.send(customerProvider.genMsisdn(ticket.getNumberPlate(), ticket.getMsisdn()), SMSConfig.CAR_ADDED_VALUE+ticket.getParkingDesc());
-            if(isCarOut)
-                smsSender.send(customerProvider.genMsisdn(ticket.getNumberPlate(), ticket.getMsisdn()), SMSConfig.CAR_OUT_MSG+ticket.getParkingDesc());
+                smsSender.send(customerProvider.genMsisdn(ticket.getNumberPlate(), ticket.getMsisdn()), message);
         }catch(Exception e){
             out.print(AppDesc.APP_DESC+"BackgroundSMS exec sending SMS failed due to: "+e.getMessage());
         }

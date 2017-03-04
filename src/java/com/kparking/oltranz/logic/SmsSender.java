@@ -33,7 +33,6 @@ public class SmsSender {
         out.print(AppDesc.APP_DESC+"SmsSender send received: "+ DataFactory.objectToString(smsSendResponse));
         }catch(Exception e){
             out.print(AppDesc.APP_DESC+"SmsSender send sending to: "+ destMsisdn+" with message: "+message+" failed due to: "+e.getLocalizedMessage());
-        }
-        
+        }       
     }
 }

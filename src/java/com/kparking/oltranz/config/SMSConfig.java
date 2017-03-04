@@ -15,6 +15,6 @@ public class SMSConfig {
     public static final String SRC_2 = "KVCS-PARKS";
     
     public static final String CAR_IN_MSG = "Mukiriya mwiza umazeguparika, Dear customer you parked, Cher client vous avez gare: ";
-    public static final String CAR_OUT_MSG = "Mukiriya mwiza muvanyeimodoka muri parikingi, Dear Customer you moved out your car, Cher client vous venez de sortir votre auto: ";
-    public static final String CAR_ADDED_VALUE = "Mukiriya mwiza mu maze isaha muri parikingi, Dear Customer an hour elpsed in parking, Cher client une heure est passe dans le parking.";
+    public static final String CAR_OUT_MSG = "Mukiriya mwiza uvanye imodoka muri parikingi, Dear Customer you moved out your car, Cher client vous venez de sortir votre auto: ";
+    public static final String CAR_ADDED_VALUE = "Mukiriya mwiza, Dear customer, Cher client: ";
 }
