@@ -7,7 +7,9 @@ package com.kparking.oltranz.logic;
 
 import com.kparking.oltranz.apiclient.ApInterface;
 import com.kparking.oltranz.config.AppDesc;
+import com.kparking.oltranz.entities.CallBack;
 import com.kparking.oltranz.entities.Ticket;
+import com.kparking.oltranz.facades.CallBackFacade;
 import com.kparking.oltranz.facades.TicketFacade;
 import com.kparking.oltranz.simplebeans.commonbeans.ConductorBean;
 import com.kparking.oltranz.simplebeans.commonbeans.ParkingBean;
@@ -47,6 +49,8 @@ public class UssdProcessor {
             SmsSender smsSender;
     @EJB
             CustomerProvider customerProvider;
+    @EJB
+            CallBackFacade callBackFacade;
     public Response receiveCarInRequest(UssdRequest request){
         try{
             if(request.getNewRequest() == 1){
@@ -170,12 +174,16 @@ public class UssdProcessor {
             }
             
             String message = null;
+            String lastTime = null;
+            CallBack callBack = callBackFacade.getCustormerLastCallback(request.getInput());
+            if(callBack != null)
+                lastTime = callBack.getCreatedOn().toString();
             if(ticket.getOutDate() == null){
-                message = ticket.getNumberPlate()+"Iri muri parking, Is parked, est garé^"+ticket.getParkingDesc();
+                message = ticket.getNumberPlate()+"^Iri muri parikingi, Is parked, est garé^"+ticket.getParkingDesc()+" / Yagiyemo, In time, Entre "+lastTime;
             }else{
-                message = ticket.getNumberPlate()+"Bwanyuma yari, Lastly seen, Derinierement vu^"+ticket.getParkingDesc();
+                message = ticket.getNumberPlate()+"^Bwanyuma yari, Lastly seen, Derinierement vu^"+ticket.getParkingDesc()+" / "+ticket.getOutDate() != null?ticket.getOutDate().toString():"";
             }
-           
+            
             out.print(AppDesc.APP_DESC+"UssdProcessor checkCar Succeeded to take out car"+request.getInput());
             return ReturnConfig.isSuccess(successGen(request, message));
         }catch(Exception e){

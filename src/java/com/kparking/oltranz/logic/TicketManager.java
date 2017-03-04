@@ -148,6 +148,7 @@ return true;
                     callBackFacade.refreshCallBack();
                 }
                 DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");
+                
                 Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, oTicket, SMSConfig.CAR_OUT_MSG+oTicket.getNumberPlate()+" "+oTicket.getParkingDesc()+"/"+dateFormat.format(date)));
                 smsThread.start();
             }
@@ -227,8 +228,8 @@ return true;
     }
     
     public static long elapsed(Date startDate, Date endDate, TimeUnit timeUnit) {
-        long diffInMillies = endDate.getTime() - startDate.getTime();
-        return timeUnit.convert(diffInMillies,TimeUnit.MINUTES);
+        long diffMills = endDate.getTime() - startDate.getTime();
+        return timeUnit.toMinutes(diffMills);
     }
     
     private void createSchedule(MyJob mJob){
