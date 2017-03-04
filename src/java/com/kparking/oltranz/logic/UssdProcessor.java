@@ -22,6 +22,8 @@ import com.kparking.oltranz.utilities.DataFactory;
 import com.kparking.oltranz.utilities.IdGenerator;
 import com.kparking.oltranz.utilities.ReturnConfig;
 import static java.lang.System.out;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import javax.ejb.EJB;
@@ -176,15 +178,21 @@ public class UssdProcessor {
             String message = null;
             String lastTime = null;
             CallBack callBack = callBackFacade.getCustormerLastCallback(request.getInput());
-            if(callBack != null)
-                lastTime = callBack.getCreatedOn().toString();
+            if(callBack != null){
+                DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");
+                lastTime = dateFormat.format(callBack.getCreatedOn());
+                out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a car with "+request.getInput()+" last date: "+lastTime+" Requestor: "+request.getMsisdn());
+                
+            }
             if(ticket.getOutDate() == null){
-                message = ticket.getNumberPlate()+"Iri muri parikingi, Is parked, est garé^"+ticket.getParkingDesc()+" / Yagiyemo, In time, Entre "+lastTime;
+                message = ticket.getNumberPlate()+"Iri muri parikingi, Is parked, est garé^"+ticket.getParkingDesc()+" / Yagiyemo, In time, Entre "+lastTime != null?lastTime:"time not available";
+                out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a car with "+request.getInput()+" last date: "+lastTime != null?lastTime:""+" Requestor: "+request.getMsisdn()+" message: "+message);
             }else{
-                message = ticket.getNumberPlate()+"Bwanyuma yari, Lastly seen, Derinierement vu^"+ticket.getParkingDesc()+" / "+ticket.getOutDate() != null?ticket.getOutDate().toString():"";
+                message = ticket.getNumberPlate()+"Bwanyuma yari, Lastly seen, Dernierement vu^"+ticket.getParkingDesc()+" / "+lastTime != null?lastTime:"time not available";
+                out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a car with "+request.getInput()+" last date: "+lastTime+" Requestor: "+request.getMsisdn()+" message: "+message);
             }
             
-            out.print(AppDesc.APP_DESC+"UssdProcessor checkCar Succeeded to take out car"+request.getInput());
+            out.print(AppDesc.APP_DESC+"UssdProcessor checkCar Succeeded to check car: "+request.getInput()+" by requestor: "+request.getMsisdn());
             return ReturnConfig.isSuccess(successGen(request, message));
         }catch(Exception e){
             out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarOut action failed due to: "+e.getMessage());
