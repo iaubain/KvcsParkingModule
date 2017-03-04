@@ -160,7 +160,7 @@ public class UssdProcessor {
                 //check the session for possible list of parking in there
                 out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a new request received from"+request.getMsisdn());
                 
-                return ReturnConfig.isSuccess(carInOutMenu("Kureba Imodoka.^Check car.^Vérifier l'auto.",request));
+                return ReturnConfig.isSuccess(carInOutMenu("Kureba Imodoka.^Check car.^Vérifier l'auto.^Shyiramo puraki, Fill number plate, Entre la plaque.",request));
             }
             
             Ticket ticket = ticketFacade.getCustormerLastTicket(request.getInput());
