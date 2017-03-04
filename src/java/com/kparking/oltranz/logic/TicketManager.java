@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.ejb.EJB;
@@ -205,8 +204,8 @@ return true;
             Date date = new Date();
             oTicket.setOutDate(new Date());
             ticketFacade.edit(oTicket);
-            long elapsedTime = elapsed(callBack.getCreatedOn(), date, TimeUnit.MINUTES);
-            Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, checkTicket, SMSConfig.CAR_ADDED_VALUE+" "+elapsedTime+" iminota irashize, minutes elapsed, minutes ecoule"+oTicket.getNumberPlate()+"/"+oTicket.getParkingDesc()));
+            long elapsedTime = elapsed(callBack.getCreatedOn(), date);
+            Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, checkTicket, SMSConfig.CAR_ADDED_VALUE+" "+elapsedTime+" iminota irashize, minutes elapsed, minutes ecoule "+oTicket.getNumberPlate()+" / "+oTicket.getParkingDesc()));
             smsThread.start();
             
             Ticket nTicket = new Ticket(idGenerator(),
@@ -227,9 +226,9 @@ return true;
         }
     }
     
-    public static long elapsed(Date startDate, Date endDate, TimeUnit timeUnit) {
+    public static long elapsed(Date startDate, Date endDate) {
         long diffMills = endDate.getTime() - startDate.getTime();
-        return timeUnit.toMinutes(diffMills);
+        return (diffMills/1000)/60;
     }
     
     private void createSchedule(MyJob mJob){
