@@ -179,9 +179,9 @@ public class UssdProcessor {
             if(callBack != null)
                 lastTime = callBack.getCreatedOn().toString();
             if(ticket.getOutDate() == null){
-                message = ticket.getNumberPlate()+"^Iri muri parikingi, Is parked, est garé^"+ticket.getParkingDesc()+" / Yagiyemo, In time, Entre "+lastTime;
+                message = ticket.getNumberPlate()+"Iri muri parikingi, Is parked, est garé^"+ticket.getParkingDesc()+" / Yagiyemo, In time, Entre "+lastTime;
             }else{
-                message = ticket.getNumberPlate()+"^Bwanyuma yari, Lastly seen, Derinierement vu^"+ticket.getParkingDesc()+" / "+ticket.getOutDate() != null?ticket.getOutDate().toString():"";
+                message = ticket.getNumberPlate()+"Bwanyuma yari, Lastly seen, Derinierement vu^"+ticket.getParkingDesc()+" / "+ticket.getOutDate() != null?ticket.getOutDate().toString():"";
             }
             
             out.print(AppDesc.APP_DESC+"UssdProcessor checkCar Succeeded to take out car"+request.getInput());
