@@ -175,7 +175,7 @@ public class UssdProcessor {
                 return ReturnConfig.isSuccess(faillureGen(request, request.getInput()+"^Ntibonetse, Not available, N'est pas trouvé"));
             }
             
-            String message = null;
+            String message;
             String lastTime = null;
             CallBack callBack = callBackFacade.getCustormerLastCallback(request.getInput());
             if(callBack != null){
@@ -184,11 +184,12 @@ public class UssdProcessor {
                 out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a car with "+request.getInput()+" last date: "+lastTime+" Requestor: "+request.getMsisdn());
                 
             }
+            lastTime = lastTime != null?lastTime:"time not available";
             if(ticket.getOutDate() == null){
-                message = ticket.getNumberPlate()+"Iri muri parikingi, Is parked, est garé^"+ticket.getParkingDesc()+" / Yagiyemo, In time, Entre "+lastTime != null?lastTime:"time not available";
+                message = ticket.getNumberPlate()+" Iri muri parikingi, Is parked, est garé^"+ticket.getParkingDesc()+" / Yagiyemo, In time, Entre "+lastTime;
                 out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a car with "+request.getInput()+" last date: "+lastTime != null?lastTime:""+" Requestor: "+request.getMsisdn()+" message: "+message);
             }else{
-                message = ticket.getNumberPlate()+"Bwanyuma yari, Lastly seen, Dernierement vu^"+ticket.getParkingDesc()+" / "+lastTime != null?lastTime:"time not available";
+                message = ticket.getNumberPlate()+" Bwanyuma yari, Lastly seen, Dernierement vu^"+ticket.getParkingDesc()+" / "+lastTime;
                 out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a car with "+request.getInput()+" last date: "+lastTime+" Requestor: "+request.getMsisdn()+" message: "+message);
             }
             
