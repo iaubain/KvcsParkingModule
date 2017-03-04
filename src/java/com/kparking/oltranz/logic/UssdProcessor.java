@@ -126,7 +126,7 @@ public class UssdProcessor {
             
             ConductorBean conductorBean = responseConductor.getConductor();
             String conductorNames = conductorBean.getFirstName() != null?conductorBean.getFirstName():"" +conductorBean.getMiddleName()!= null?conductorBean.getMiddleName():"" + conductorBean.getLastName()!= null?conductorBean.getLastName():"";
-           
+            
             List<Ticket> todayTickets = ticketFacade.getTicketsByNumberPlate(request.getInput());
             int check=0;
             if(todayTickets != null){
@@ -148,6 +148,36 @@ public class UssdProcessor {
             }
             out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarOut Succeeded to take out car"+request.getInput());
             return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Gukura imodoka. "+request.getInput()+" muri parikingi.^Birakozwe."));
+        }catch(Exception e){
+            out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarOut action failed due to: "+e.getMessage());
+            return ReturnConfig.isSuccess(faillureGen(request, "KVCS PARKING SYSTEM^Ibyo mushaka ntibibonetse.^Mwongere mukanya."));
+        }
+    }
+    
+    public Response checkCar(UssdRequest request){
+        try{
+            if(request.getNewRequest() == 1){
+                //check the session for possible list of parking in there
+                out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a new request received from"+request.getMsisdn());
+                
+                return ReturnConfig.isSuccess(carInOutMenu("Kureba Imodoka.^Check car.^Vérifier l'auto.",request));
+            }
+            
+            Ticket ticket = ticketFacade.getCustormerLastTicket(request.getInput());
+            if(ticket == null){
+                out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a car with "+request.getInput()+" with no ticket: by conductor: "+request.getMsisdn());
+                return ReturnConfig.isSuccess(faillureGen(request, request.getInput()+"^Ntibonetse, Not available, N'est pas trouvé"));
+            }
+            
+            String message = null;
+            if(ticket.getOutDate() == null){
+                message = ticket.getNumberPlate()+"Iri muri parking, Is parked, est garé^"+ticket.getParkingDesc();
+            }else{
+                message = ticket.getNumberPlate()+"Bwanyuma yari, Lastly seen, Derinierement vu^"+ticket.getParkingDesc();
+            }
+           
+            out.print(AppDesc.APP_DESC+"UssdProcessor checkCar Succeeded to take out car"+request.getInput());
+            return ReturnConfig.isSuccess(successGen(request, message));
         }catch(Exception e){
             out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarOut action failed due to: "+e.getMessage());
             return ReturnConfig.isSuccess(faillureGen(request, "KVCS PARKING SYSTEM^Ibyo mushaka ntibibonetse.^Mwongere mukanya."));

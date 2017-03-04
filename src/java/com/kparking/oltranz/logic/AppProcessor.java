@@ -55,4 +55,19 @@ public class AppProcessor {
             return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Bad format.");
         }
     }
+    
+    public Response checkCar(HttpHeaders headers, String body){
+        try{
+            out.print(AppDesc.APP_DESC+"received from USSD agregator: "+body);
+            UssdRequest request = (UssdRequest) DataFactory.xmlStringToObject(UssdRequest.class, body);
+            if(request == null){
+                out.print(AppDesc.APP_DESC+"failed to process request due to: null Request");
+                return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Bad format.");
+            }
+            return ussdProcessor.checkCar(request);
+        }catch(Exception e){
+            out.print(AppDesc.APP_DESC+"failed to process request due to: "+e.getMessage());
+            return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Bad format.");
+        }
+    }
 }

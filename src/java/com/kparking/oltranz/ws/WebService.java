@@ -43,6 +43,14 @@ public class WebService {
         return appReceiver.clientCarOut(requestContext.getRemoteAddr(), requestContext.getRemotePort(), headers, body);//.clientReceiver(headers, body);
     }
     
+    @POST
+    @Path("/checkCar")
+    public Response checkCar(@Context HttpServletRequest requestContext, @Context HttpHeaders headers, String body){
+        out.print(AppDesc.APP_DESC+" Source IP: " + requestContext.getRemoteAddr() + ", Port: " + requestContext.getRemotePort() + ", Host: " + requestContext.getRemoteHost());
+        out.print(AppDesc.APP_DESC+" Node Received Headers "+headers.toString()+" and Body  "+body);
+        return appReceiver.checkCar(requestContext.getRemoteAddr(), requestContext.getRemotePort(), headers, body);//.clientReceiver(headers, body);
+    }
+    
     @GET
     @Path("/schedCallBack")
     public Response schedCallBack(@Context HttpServletRequest requestContext, @Context HttpHeaders headers, String body){
