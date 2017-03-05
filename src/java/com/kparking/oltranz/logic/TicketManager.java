@@ -202,7 +202,7 @@ return true;
                 return false;
             }
             
-            if(oTicket.getOutDate() != null){
+            if(oTicket.getOutDate() != null && oTicket.getOutDate().equals("")){
                 out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket Car "+oTicket.getNumberPlate()+" ticket "+oldTicket+" was taken already out of the parking: "+oTicket.getParkingId());
                 return true;
             }
