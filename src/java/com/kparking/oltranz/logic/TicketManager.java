@@ -201,6 +201,11 @@ return true;
                 out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket Failed to generate ticket due to: no ticket found for : "+oldTicket);
                 return false;
             }
+            
+            if(oTicket.getOutDate() != null){
+                out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket Car "+oTicket.getNumberPlate()+" ticket "+oldTicket+" was taken already out of the parking: "+oTicket.getParkingId());
+                return true;
+            }
             Date date = new Date();
             oTicket.setOutDate(new Date());
             ticketFacade.edit(oTicket);
