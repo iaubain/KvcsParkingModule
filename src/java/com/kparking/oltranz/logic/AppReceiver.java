@@ -29,6 +29,9 @@ public class AppReceiver {
     public Response checkCar(String sourceIp, int sourcePort, HttpHeaders headers, String body){
         return appProcessor.checkCar(headers, body);
     }
+    public Response signupCar(String sourceIp, int sourcePort, HttpHeaders headers, String body){
+        return appProcessor.signupCar(headers, body);
+    }
     public Response scheduleCallBack(String sourceIp, int sourcePort, HttpHeaders headers, String body){
         return callBackHandler.callBackreceiver(headers);
     }

@@ -8,8 +8,10 @@ package com.kparking.oltranz.logic;
 import com.kparking.oltranz.apiclient.ApInterface;
 import com.kparking.oltranz.config.AppDesc;
 import com.kparking.oltranz.entities.CallBack;
+import com.kparking.oltranz.entities.Car;
 import com.kparking.oltranz.entities.Ticket;
 import com.kparking.oltranz.facades.CallBackFacade;
+import com.kparking.oltranz.facades.CarFacade;
 import com.kparking.oltranz.facades.TicketFacade;
 import com.kparking.oltranz.simplebeans.commonbeans.ConductorBean;
 import com.kparking.oltranz.simplebeans.commonbeans.ParkingBean;
@@ -25,6 +27,7 @@ import static java.lang.System.out;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -53,6 +56,8 @@ public class UssdProcessor {
             CustomerProvider customerProvider;
     @EJB
             CallBackFacade callBackFacade;
+    @EJB
+            CarFacade carFacade;
     public Response receiveCarInRequest(UssdRequest request){
         try{
             if(request.getNewRequest() == 1){
@@ -195,6 +200,38 @@ public class UssdProcessor {
             
             out.print(AppDesc.APP_DESC+"UssdProcessor checkCar Succeeded to check car: "+request.getInput()+" by requestor: "+request.getMsisdn());
             return ReturnConfig.isSuccess(successGen(request, message));
+        }catch(Exception e){
+            out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarOut action failed due to: "+e.getMessage());
+            return ReturnConfig.isSuccess(faillureGen(request, "KVCS PARKING SYSTEM^Ibyo mushaka ntibibonetse.^Mwongere mukanya."));
+        }
+    }
+    
+    public Response signupCar(UssdRequest request){
+        try{
+            if(request.getNewRequest() == 1){
+                //check the session for possible list of parking in there
+                out.print(AppDesc.APP_DESC+"UssdProcessor signupCar a new request received from"+request.getMsisdn());
+                
+                return ReturnConfig.isSuccess(carInOutMenu("Shyiramo imodoka.^Signup Car.^Enregistre l'auto.^Shyiramo puraki, Fill number plate, Entre la plaque.",request));
+            }
+            ResponseConductor responseConductor = getConductor(request.getMsisdn());
+            Car car;
+            if(!validateEntry(responseConductor)){
+                out.print(AppDesc.APP_DESC+"UssdProcessor signupCar no conductor found for: "+request.getMsisdn());
+                car = new Car(request.getInput(), request.getMsisdn(), "Owner", new Date());
+                carFacade.create(car);
+                carFacade.refreshCar();
+                return ReturnConfig.isSuccess(successGen(request, "Birakozwe, Well Done, Bien fait!"));
+            }
+            ConductorBean conductorBean = responseConductor.getConductor();
+            String conductorNames = conductorBean.getFirstName() != null?conductorBean.getFirstName():"" +conductorBean.getMiddleName()!= null?conductorBean.getMiddleName():"" + conductorBean.getLastName()!= null?conductorBean.getLastName():"";
+            
+            car = new Car(DataFactory.splitString(request.getInput(), " ")[0], request.getMsisdn(), "Conductor:ID"+responseConductor.getConductor().getConductorId()+" Names:"+conductorNames, new Date());
+            carFacade.create(car);
+            carFacade.refreshCar();
+            
+            out.print(AppDesc.APP_DESC+"UssdProcessor signupCar Succeeded to signup car: "+request.getInput()+" by requestor: "+request.getMsisdn());
+            return ReturnConfig.isSuccess(successGen(request, conductorNames+"^Kwandika imodoka birakozwe"));
         }catch(Exception e){
             out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarOut action failed due to: "+e.getMessage());
             return ReturnConfig.isSuccess(faillureGen(request, "KVCS PARKING SYSTEM^Ibyo mushaka ntibibonetse.^Mwongere mukanya."));

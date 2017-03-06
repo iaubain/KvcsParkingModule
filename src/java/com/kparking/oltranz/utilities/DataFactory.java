@@ -139,4 +139,24 @@ public class DataFactory {
             return null;
         }
     }
+    
+    public static final String[] splitString(String input, String criteria){
+        out.print(AppDesc.APP_DESC+"DataFactory splitString going to split: "+ input+" based on criteria: ["+criteria+"]");
+        return input.split(criteria);
+    }
+    
+    public static final String phoneFormat(String input){
+        try{
+            out.print(AppDesc.APP_DESC+"DataFactory phoneFormat going to format: "+ input);
+            input = input.trim().replace(" ", "").replace("+", "");
+            if(input.length() < 10){
+                out.print(AppDesc.APP_DESC+"DataFactory phoneFormat failed to format: "+ input+" due to: invaliv length");
+                return "Tel ntago yemewe, invalid tel, tel refuser.";
+            }
+            return input;
+        }catch(Exception e){
+            out.print(AppDesc.APP_DESC+"DataFactory phoneFormat failed to format: "+ input+" due to:"+e.getMessage());
+            return null;
+        }
+    }
 }
