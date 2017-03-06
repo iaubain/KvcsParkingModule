@@ -32,13 +32,13 @@ public class Car implements Serializable {
             pkColumnValue="CAR_SEQ")
     @GeneratedValue(strategy=GenerationType.TABLE, generator="CarSeqGen")
     private String id;
-    @Column(name="numberPlate", length = 522, nullable = false, unique = true)
+    @Column(name="numberPlate", length = 522, nullable = false)
             private String numberPlate;
-    @Column(name="creatorTel", length = 522, nullable = false, unique = true)
+    @Column(name="creatorTel", length = 522, nullable = false)
             private String creatorTel;
-    @Column(name="creatorName", length = 522, nullable = false, unique = true)
+    @Column(name="creatorName", length = 522, nullable = false)
             private String creatorName;
-    @Column(name="created", length = 522, nullable = false, unique = true)
+    @Column(name="created", length = 522, nullable = false)
     @Temporal(javax.persistence.TemporalType.TIMESTAMP)
             private Date created;
 

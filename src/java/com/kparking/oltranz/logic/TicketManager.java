@@ -83,8 +83,8 @@ public class TicketManager {
                 callBackFacade.refreshCallBack();
             }
             // create schedule
-            MyFrequency myFrequency = new MyFrequency("minute", "180000");
-//            MyFrequency myFrequency = new MyFrequency("hour", "3600000");
+//            MyFrequency myFrequency = new MyFrequency("minute", "180000");
+            MyFrequency myFrequency = new MyFrequency("hour", "3600000");
 List<JobTasks> mTasks = new ArrayList<>();
 JobTasks jobTasks = new JobTasks(ticket.getTicketId(),
         getClass().getName(),
@@ -202,7 +202,7 @@ return true;
                 return false;
             }
             
-            if(oTicket.getOutDate() != null && oTicket.getOutDate().equals("")){
+            if(oTicket.getOutDate() != null){
                 out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket Car "+oTicket.getNumberPlate()+" ticket "+oldTicket+" was taken already out of the parking: "+oTicket.getParkingId());
                 return true;
             }
@@ -210,7 +210,7 @@ return true;
             oTicket.setOutDate(new Date());
             ticketFacade.edit(oTicket);
             long elapsedTime = elapsed(callBack.getCreatedOn(), date);
-            Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, checkTicket, SMSConfig.CAR_ADDED_VALUE+" "+elapsedTime+" iminota irashize, minutes elapsed, minutes ecoule "+oTicket.getNumberPlate()+" / "+oTicket.getParkingDesc()));
+            Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, checkTicket, SMSConfig.CAR_ADDED_VALUE+" isaha "+elapsedTime+" (z)irashize, hour(s) elapsed, heure(s) ecoule "+oTicket.getNumberPlate()+" / "+oTicket.getParkingDesc()));
             smsThread.start();
             
             Ticket nTicket = new Ticket(idGenerator(),

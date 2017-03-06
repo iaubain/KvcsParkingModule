@@ -5,8 +5,10 @@
 */
 package com.kparking.oltranz.logic;
 
+import com.kparking.oltranz.config.AppDesc;
 import com.kparking.oltranz.entities.Car;
 import com.kparking.oltranz.facades.CarFacade;
+import static java.lang.System.out;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 
@@ -22,10 +24,11 @@ public class CustomerProvider {
         nPlate = nPlate.toUpperCase();
         Car car = carFacade.getCustormerLastRecord(nPlate);
         if(car == null){
+            out.print(AppDesc.APP_DESC+"CustomerProvider genMsisdn failed to get Car owner MSISDN");
             return initMsisdn;
         }
         
-        if(car.getCreatorTel() != null && car.getCreatorTel().length()<=10){
+        if(car.getCreatorTel() != null){
             return car.getCreatorTel();
         }else{
             return initMsisdn;

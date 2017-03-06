@@ -153,6 +153,9 @@ public class DataFactory {
                 out.print(AppDesc.APP_DESC+"DataFactory phoneFormat failed to format: "+ input+" due to: invaliv length");
                 return "Tel ntago yemewe, invalid tel, tel refuser.";
             }
+            String firstPart = input.substring(0,1);
+            if(firstPart.equalsIgnoreCase("07"))
+                input = "25"+input;
             return input;
         }catch(Exception e){
             out.print(AppDesc.APP_DESC+"DataFactory phoneFormat failed to format: "+ input+" due to:"+e.getMessage());
