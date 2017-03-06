@@ -55,7 +55,7 @@ public class CallBackFacade extends AbstractFacade<CallBack> {
         try{
             if(numberPlate.isEmpty())
                 return null;
-            Query q= em.createQuery("Select C from CallBack C WHERE C.numberPlate = :numberPlate ORDER BY C.id DESC");
+            Query q= em.createQuery("Select C from CallBack C WHERE C.numberPlate = :numberPlate ORDER BY C.id ASC");
             q.setParameter("numberPlate", numberPlate)
                     .setMaxResults(1);
             List<CallBack> list = (List<CallBack>)q.getResultList();

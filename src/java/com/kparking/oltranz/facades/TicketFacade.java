@@ -86,7 +86,7 @@ public class TicketFacade extends AbstractFacade<Ticket> {
         try{
             if(msisdn.isEmpty())
                 return null;
-            Query q= em.createQuery("Select T from Ticket T WHERE T.msisdn = :msisdn ORDER BY T.id DESC");
+            Query q= em.createQuery("Select T from Ticket T WHERE T.msisdn = :msisdn ORDER BY T.id ASC");
             q.setParameter("msisdn", msisdn)
                     .setMaxResults(1);
             List<Ticket> list = (List<Ticket>)q.getResultList();
@@ -104,7 +104,7 @@ public class TicketFacade extends AbstractFacade<Ticket> {
         try{
             if(numberPlate.isEmpty())
                 return null;
-            Query q= em.createQuery("Select T from Ticket T WHERE T.numberPlate = :numberPlate ORDER BY T.id DESC");
+            Query q= em.createQuery("Select T from Ticket T WHERE T.numberPlate = :numberPlate ORDER BY T.id ASC");
             q.setParameter("numberPlate", numberPlate)
                     .setMaxResults(1);
             List<Ticket> list = (List<Ticket>)q.getResultList();
