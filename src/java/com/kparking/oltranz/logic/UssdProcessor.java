@@ -218,7 +218,7 @@ public class UssdProcessor {
             Car car;
             if(!validateEntry(responseConductor)){
                 out.print(AppDesc.APP_DESC+"UssdProcessor signupCar no conductor found for: "+request.getMsisdn());
-                car = new Car(request.getInput(), request.getMsisdn(), "Owner", new Date());
+                car = new Car(request.getInput().toUpperCase(), request.getMsisdn(), "Owner", new Date());
                 carFacade.create(car);
                 carFacade.refreshCar();
                 return ReturnConfig.isSuccess(successGen(request, "Birakozwe, Well Done, Bien fait!"));
@@ -226,7 +226,13 @@ public class UssdProcessor {
             ConductorBean conductorBean = responseConductor.getConductor();
             String conductorNames = conductorBean.getFirstName() != null?conductorBean.getFirstName():"" +conductorBean.getMiddleName()!= null?conductorBean.getMiddleName():"" + conductorBean.getLastName()!= null?conductorBean.getLastName():"";
             
-            car = new Car(DataFactory.splitString(request.getInput(), " ")[0], request.getMsisdn(), "Conductor:ID"+responseConductor.getConductor().getConductorId()+" Names:"+conductorNames, new Date());
+            String[] data = DataFactory.splitString(request.getInput(), " ");
+            String nPlate = data[0].toUpperCase();
+            String tel = data[1];
+            car = new Car(nPlate,
+                    tel,
+                    "Conductor:ID"+responseConductor.getConductor().getConductorId()+" Names:"+conductorNames,
+                    new Date());
             carFacade.create(car);
             carFacade.refreshCar();
             
