@@ -104,7 +104,9 @@ public class UssdProcessor {
             Ticket checkLastTicket = ticketFacade.getCustormerLastTicket(request.getInput());
             if(checkLastTicket != null){
                 if(checkLastTicket.getOutDate() != null){
-                    long diffTime = 60 - ((new Date().getTime()/1000)/60 - (checkLastTicket.getInDate().getTime()/1000)/60);
+                    long diffTime = ((new Date().getTime()/1000)/60 - (checkLastTicket.getInDate().getTime()/1000)/60) - 60;
+                    if(diffTime < 0)
+                        diffTime = diffTime*-1;
                     out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+" elapsed minutes from last ticket: "+diffTime+" minutes");
                         
                     if(diffTime < 60){
