@@ -29,6 +29,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.ws.rs.core.Response;
@@ -104,16 +105,16 @@ public class UssdProcessor {
             Ticket checkLastTicket = ticketFacade.getCustormerLastTicket(request.getInput());
             if(checkLastTicket != null){
                 if(checkLastTicket.getOutDate() != null){
-                    long diffTime = ((new Date().getTime()/1000)/60 - (checkLastTicket.getInDate().getTime()/1000)/60) - 60;
-                    if(diffTime < 0)
-                        diffTime = diffTime*-1;
-                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+" elapsed minutes from last ticket: "+diffTime+" minutes");
+                    long diffTime = new Date().getTime() - checkLastTicket.getInDate().getTime();
+                    long durationMinutes = TimeUnit.MILLISECONDS.toMinutes(diffTime)/ 60;
+                    
+                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+" elapsed minutes from last ticket: "+durationMinutes+" minutes or "+diffTime+" milliseconds.");
                         
-                    if(diffTime < 60){
-                        out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+" has remained time before an hour get elapsed: "+diffTime+" minutes");
-                        return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^ Iyi Imodoka. "+checkLastTicket.getNumberPlate()+" iracyafite iminota "+diffTime+" kugirango isaha ishire.^ Yinjiriye muri Parikingi: "+checkLastTicket.getParkingDesc()+"^Yashyizwemo na: "+checkLastTicket.getConductorName()));
+                    if(durationMinutes < 60){
+                        out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+" has remained time before an hour get elapsed: "+durationMinutes+" minutes");
+                        return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^ Iyi Imodoka. "+checkLastTicket.getNumberPlate()+" iracyafite iminota "+(60-durationMinutes)+" kugirango isaha ishire.^ Yinjiriye muri Parikingi: "+checkLastTicket.getParkingDesc()+"^Yashyizwemo na: "+checkLastTicket.getConductorName()));
                     }
-                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+"  elapsed minutes from last ticket: "+diffTime+" minutes");
+                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+"  elapsed minutes from last ticket: "+durationMinutes+" minutes");
                         
                 }else{
                     out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" already parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId());
