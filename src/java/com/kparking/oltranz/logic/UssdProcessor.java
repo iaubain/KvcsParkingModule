@@ -171,6 +171,13 @@ return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Gushyira Imo
             ConductorBean conductorBean = responseConductor.getConductor();
             String conductorNames = conductorBean.getFirstName() != null?conductorBean.getFirstName():"" +conductorBean.getMiddleName()!= null?conductorBean.getMiddleName():"" + conductorBean.getLastName()!= null?conductorBean.getLastName():"";
             
+            request.setInput(request.getInput().replace(" ", "").toUpperCase());
+            if(! DataFactory.numberPlateValidator(request.getInput())){
+                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
+                return ReturnConfig.isSuccess(faillureGen(request, "Ikaze, "+conductorNames+"^Plaque: "+request.getInput()+" Reba niba yanditse neza."));
+            }
+            
+            
             List<Ticket> todayTickets = ticketFacade.getTicketsByNumberPlate(request.getInput());
             int check=0;
             if(todayTickets != null){
@@ -207,6 +214,11 @@ return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Gushyira Imo
                 return ReturnConfig.isSuccess(carInOutMenu("Kureba Imodoka.^Check car.^Vérifier l'auto.^Shyiramo puraki, Fill number plate, Entre la plaque.",request));
             }
             
+            request.setInput(request.getInput().replace(" ", "").toUpperCase());
+            if(! DataFactory.numberPlateValidator(request.getInput())){
+                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
+                return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza."));
+            }
             Ticket ticket = ticketFacade.getCustormerLastTicket(request.getInput());
             if(ticket == null){
                 out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a car with "+request.getInput()+" with no ticket: by conductor: "+request.getMsisdn());
@@ -251,6 +263,11 @@ return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Gushyira Imo
             Car car;
             if(!validateEntry(responseConductor)){
                 out.print(AppDesc.APP_DESC+"UssdProcessor signupCar no conductor found for: "+request.getMsisdn());
+                request.setInput(request.getInput().replace(" ", "").toUpperCase());
+                if(! DataFactory.numberPlateValidator(request.getInput())){
+                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
+                    return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza, Typo Error."));
+                }
                 car = new Car(request.getInput().toUpperCase(), request.getMsisdn(), "Owner", new Date());
                 carFacade.create(car);
                 carFacade.refreshCar();
@@ -262,6 +279,10 @@ return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Gushyira Imo
             String[] data = DataFactory.splitString(request.getInput(), " ");
             String nPlate = data[0].toUpperCase();
             String tel = data[1];
+            if(! DataFactory.numberPlateValidator(nPlate)){
+                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
+                return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza, Typo Error."));
+            }
             car = new Car(nPlate,
                     tel,
                     "Conductor:ID"+responseConductor.getConductor().getConductorId()+" Names:"+conductorNames,
