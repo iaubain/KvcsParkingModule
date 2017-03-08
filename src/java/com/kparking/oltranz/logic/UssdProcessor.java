@@ -111,7 +111,7 @@ if(checkLastTicket != null){
         
         
         Date endDate = dateFormat.parse(dateFormat.format(new Date()));
-        out.print(AppDesc.APP_DESC+" UssdProcessor genNewTicket tiacket endDate: "+endDate);
+        out.print(AppDesc.APP_DESC+" UssdProcessor genNewTicket ticket endDate: "+endDate);
         
         long durationMinutes = DataFactory.printDifference(startDate, endDate);
         out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+" elapsed minutes from last ticket: "+durationMinutes+" minutes.");
