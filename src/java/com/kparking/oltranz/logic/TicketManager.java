@@ -84,44 +84,44 @@ public class TicketManager {
                 callBackFacade.refreshCallBack();
             }
             // create schedule
-//            MyFrequency myFrequency = new MyFrequency("minute", "180000");
-MyFrequency myFrequency = new MyFrequency("hour", "3600000");
-List<JobTasks> mTasks = new ArrayList<>();
-JobTasks jobTasks = new JobTasks(ticket.getTicketId(),
-        getClass().getName(),
-        myFrequency,
-        ApiConfig.CALLBACK_URL,
-        1);
-mTasks.add(jobTasks);
-
-//Get the current date
-DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");
-Timestamp timestamp = new Timestamp(new Date().getTime());
-Calendar calendar = Calendar.getInstance();
-out.print(AppDesc.APP_DESC+"TicketManager genNewTicket Schedule for ticket "+ticket.getTicketId()+" is triged now: "+timestamp);
-
-//add 1 day to the current date
-calendar.setTimeInMillis(timestamp.getTime());
-calendar.add(Calendar.HOUR, 24);
-timestamp = new Timestamp(calendar.getTime().getTime());
-
-out.print(AppDesc.APP_DESC+"TicketManager genNewTicket Schedule for ticket "+ticket.getTicketId()+" will expire on: "+timestamp);
-
-MyJob mJob = new MyJob(ticket.getTicketId(),
-        "daily",
-        getClass().getName(),
-        ApiConfig.CALLBACK_URL,
-        dateFormat.format(timestamp),
-        true,
-        myFrequency,
-        mTasks);
-
-createSchedule(mJob);
-
-Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, ticket, SMSConfig.CAR_IN_MSG+ticket.getNumberPlate()+" "+ticket.getParkingDesc()+" / "+timestamp));
-smsThread.start();
-
-return true;
+            //            MyFrequency myFrequency = new MyFrequency("minute", "180000");
+            MyFrequency myFrequency = new MyFrequency("hour", "3600000");
+            List<JobTasks> mTasks = new ArrayList<>();
+            JobTasks jobTasks = new JobTasks(ticket.getTicketId(),
+                    getClass().getName(),
+                    myFrequency,
+                    ApiConfig.CALLBACK_URL,
+                    1);
+            mTasks.add(jobTasks);
+            
+            //Get the current date
+            DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");
+            Timestamp timestamp = new Timestamp(new Date().getTime());
+            Calendar calendar = Calendar.getInstance();
+            out.print(AppDesc.APP_DESC+"TicketManager genNewTicket Schedule for ticket "+ticket.getTicketId()+" is triged now: "+timestamp);
+            
+            //add 1 day to the current date
+            calendar.setTimeInMillis(timestamp.getTime());
+            calendar.add(Calendar.HOUR, 24);
+            timestamp = new Timestamp(calendar.getTime().getTime());
+            
+            out.print(AppDesc.APP_DESC+"TicketManager genNewTicket Schedule for ticket "+ticket.getTicketId()+" will expire on: "+timestamp);
+            
+            MyJob mJob = new MyJob(ticket.getTicketId(),
+                    "daily",
+                    getClass().getName(),
+                    ApiConfig.CALLBACK_URL,
+                    dateFormat.format(timestamp),
+                    true,
+                    myFrequency,
+                    mTasks);
+            
+            createSchedule(mJob);
+            
+            Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, ticket, SMSConfig.CAR_IN_MSG+ticket.getNumberPlate()+" "+ticket.getParkingDesc()+" / "+timestamp));
+            smsThread.start();
+            
+            return true;
         }catch(Exception e){
             out.print(AppDesc.APP_DESC+"TicketManager genNewTicket Failed to generate ticket due to: "+e.getMessage());
             return false;
@@ -188,11 +188,13 @@ return true;
                 if(callBack.getNumberOfCallBack()<=0){
                     out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket first callBack for this ticket: "+oldTicket);
                     callBack.setNumberOfCallBack(callBack.getNumberOfCallBack()+1);
+                    callBack.setLastAccess(new Date());
                     callBackFacade.edit(callBack);
                     callBackFacade.refreshCallBack();
                     return true;
                 }
                 callBack.setNumberOfCallBack(callBack.getNumberOfCallBack()+1);
+                callBack.setLastAccess(new Date());
                 callBackFacade.edit(callBack);
                 callBackFacade.refreshCallBack();
                 out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket "+callBack.getNumberOfCallBack()+" callBack for this ticket: "+oldTicket);
