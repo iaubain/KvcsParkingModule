@@ -70,6 +70,7 @@ public class UssdProcessor {
                 }
                 return ReturnConfig.isSuccess(carInOutMenu("Guparika^",request));
             }
+            request.setInput(request.getInput().replace(" ", "").toUpperCase());
             ResponseConductor responseConductor = getConductor(request.getMsisdn());
             if(!validateEntry(responseConductor)){
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest no conductor found for: "+request.getMsisdn());
@@ -80,6 +81,12 @@ public class UssdProcessor {
             
             ConductorBean conductorBean = responseConductor.getConductor();
             String conductorNames = conductorBean.getFirstName() != null?conductorBean.getFirstName():"" +conductorBean.getMiddleName()!= null?conductorBean.getMiddleName():"" + conductorBean.getLastName()!= null?conductorBean.getLastName():"";
+            
+            if(! DataFactory.numberPlateValidator(request.getInput())){
+                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
+                return ReturnConfig.isSuccess(faillureGen(request, "Ikaze, "+conductorNames+"^Plaque: "+request.getInput()+" Reba niba yanditse neza."));
+            }
+            
             List<ResponseDeployment> mDeploymetList =(List<ResponseDeployment>)(Object)DataFactory.stringToObjectList(ResponseDeployment.class, apInterface.getConductorDep(responseConductor.getConductor().getConductorId()));
             if(mDeploymetList == null){
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest no available parking found for: "+request.getMsisdn() +" of: "+conductorBean.getFirstName());

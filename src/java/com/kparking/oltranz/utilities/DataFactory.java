@@ -17,6 +17,8 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
@@ -198,5 +200,33 @@ public class DataFactory {
                 elapsedHours, elapsedMinutes, elapsedSeconds);
         
         return elapsedMinutes;
+    }
+    
+    public static final boolean numberPlateValidator(String numberPlate){
+        String regexRwanda = "^RA[A-Z][0-9]{3}[A-Z]$";
+        String regexPolice = "^RNP[0-9]{3}[A-Z]$";
+        String regexRDF = "^RDF[0-9]{3}[A-Z]$";
+        String regexGov = "^GOV[0-9]{3}[A-Z]{2}$";
+        String regexIT = "^IT[0-9]{3}[A-Z]{2}$";
+        String regexRDC = "^CGO[0-9]{4}[A-B]{2}[0-9]{2}$";
+        String regexBurundi = "^[A-Z][0-9]{4}$";
+        String regexUg = "^U[A-Z][0-9]{3}[A-Z]$";
+        String regexKenya = "^K[A-Z][A-Z][0-9]{3}[A-Z]$";
+        String regexMoto = "^R[A-Z][0-9]{3}[A-Z]$";
+        String totalRegx = regexRwanda+"|"+regexBurundi+"|"+regexUg+"|"+regexRDC+"|"+regexMoto+"|"+regexIT+"|"+regexRDF+"|"+regexGov+"|"+regexKenya+"|"+regexPolice;
+        out.print(AppDesc.APP_DESC+"DataFactory numberPlateValidator Current Regex: " + totalRegx);
+        out.print(AppDesc.APP_DESC+"DataFactory numberPlateValidator Current Input: " + numberPlate);
+        // Create a Pattern object
+        Pattern r = Pattern.compile(totalRegx);
+        // Now create matcher object.
+        Matcher m = r.matcher(numberPlate);
+        
+        boolean isFound = Pattern.compile(totalRegx).matcher(numberPlate).find();
+        if (isFound) {
+            out.print(AppDesc.APP_DESC+"DataFactory numberPlateValidator Found value: " + numberPlate);
+            return true;
+        }
+        out.print(AppDesc.APP_DESC+"DataFactory numberPlateValidator NO MATCH for: "+numberPlate);
+        return false;
     }
 }

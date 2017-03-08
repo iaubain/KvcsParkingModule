@@ -49,18 +49,23 @@ public class CallBack implements Serializable {
     @Column(name="createdOn", nullable = true)
     @Temporal(javax.persistence.TemporalType.TIMESTAMP)
     private Date createdOn;
-    
+    @Column(name="lastAccess", nullable = true)
+    @Temporal(javax.persistence.TemporalType.TIMESTAMP)
+    private Date lastAccess;
     public CallBack() {
     }
-    
-    public CallBack(String ticketId, String numberPlate, int numberOfCallBack, int status, String statusDesc, Date createdOn) {
+
+    public CallBack(String ticketId, String numberPlate, int numberOfCallBack, int status, String statusDesc, Date createdOn, Date lastAccess) {
         this.ticketId = ticketId;
         this.numberPlate = numberPlate;
         this.numberOfCallBack = numberOfCallBack;
         this.status = status;
         this.statusDesc = statusDesc;
         this.createdOn = createdOn;
+        this.lastAccess = lastAccess;
     }
+    
+    
     
     public String getId() {
         return id;
@@ -141,6 +146,14 @@ public class CallBack implements Serializable {
     
     public void setStatusDesc(String statusDesc) {
         this.statusDesc = statusDesc;
+    }
+
+    public Date getLastAccess() {
+        return lastAccess;
+    }
+
+    public void setLastAccess(Date lastAccess) {
+        this.lastAccess = lastAccess;
     }
     
 }

@@ -72,19 +72,20 @@ public class TicketManager {
             CallBack callBack = callBackFacade.getTicketById(ticket.getTicketId());
             if(callBack == null){
                 out.print(AppDesc.APP_DESC+"TicketManager genNewTicket No callback entry found and creating an entry for this ticket: "+ticket.getTicketId());
-                
+                Date date= new Date();
                 callBack = new CallBack(ticket.getTicketId(),
                         ticket.getNumberPlate(),
                         0,
                         StatusConfig.CREATED,
                         StatusConfig.CREATED_DESC,
-                        new Date());
+                        date,
+                        date);
                 callBackFacade.create(callBack);
                 callBackFacade.refreshCallBack();
             }
             // create schedule
 //            MyFrequency myFrequency = new MyFrequency("minute", "180000");
-            MyFrequency myFrequency = new MyFrequency("hour", "3600000");
+MyFrequency myFrequency = new MyFrequency("hour", "3600000");
 List<JobTasks> mTasks = new ArrayList<>();
 JobTasks jobTasks = new JobTasks(ticket.getTicketId(),
         getClass().getName(),
@@ -143,6 +144,7 @@ return true;
                     cancelSchedule(mJob);
                     
                     callBack.setNumberOfCallBack(callBack.getNumberOfCallBack()+1);
+                    callBack.setLastAccess(date);
                     callBackFacade.edit(callBack);
                     callBackFacade.refreshCallBack();
                 }
