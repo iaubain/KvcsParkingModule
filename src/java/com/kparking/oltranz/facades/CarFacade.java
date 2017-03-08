@@ -39,7 +39,7 @@ public class CarFacade extends AbstractFacade<Car> {
         try{
             if(numberPlate.isEmpty())
                 return null;
-            Query q= em.createQuery("Select C from Car C WHERE C.numberPlate = :numberPlate ORDER BY C.id ASC");
+            Query q= em.createQuery("Select C from Car C WHERE C.numberPlate = :numberPlate ORDER BY C.id DESC");
             q.setParameter("numberPlate", numberPlate)
                     .setMaxResults(1);
             List<Car> list = (List<Car>)q.getResultList();

@@ -13,6 +13,9 @@ import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import static java.lang.System.out;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -161,5 +164,39 @@ public class DataFactory {
             out.print(AppDesc.APP_DESC+"DataFactory phoneFormat failed to format: "+ input+" due to:"+e.getMessage());
             return null;
         }
+    }
+    
+    public static final long printDifference(Date startDate, Date endDate){
+        
+        DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");
+        //milliseconds
+        long different = endDate.getTime() - startDate.getTime();
+        
+        out.println(AppDesc.APP_DESC+" DataFactory printDifference startDate : " + startDate);
+        out.println(AppDesc.APP_DESC+" DataFactory printDifference endDate : "+ endDate);
+        out.println(AppDesc.APP_DESC+" DataFactory printDifference difference in millisecond : " + different);
+        
+        long secondsInMilli = 1000;
+        long minutesInMilli = secondsInMilli * 60;
+        long hoursInMilli = minutesInMilli * 60;
+        long daysInMilli = hoursInMilli * 24;
+        
+        long elapsedDays = different / daysInMilli;
+        different = different % daysInMilli;
+        
+        long elapsedHours = different / hoursInMilli;
+        different = different % hoursInMilli;
+        
+        long elapsedMinutes = different / minutesInMilli;
+        different = different % minutesInMilli;
+        
+        long elapsedSeconds = different / secondsInMilli;
+        
+        System.out.printf(
+                AppDesc.APP_DESC+" DataFactory printDifference %d days, %d hours, %d minutes, %d seconds%n",
+                elapsedDays,
+                elapsedHours, elapsedMinutes, elapsedSeconds);
+        
+        return elapsedMinutes;
     }
 }

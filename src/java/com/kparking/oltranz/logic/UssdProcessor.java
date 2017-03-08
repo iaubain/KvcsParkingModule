@@ -29,7 +29,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.ws.rs.core.Response;
@@ -101,34 +100,41 @@ public class UssdProcessor {
 //                        return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^ Iyi Imodoka. "+ticket.getNumberPlate()+" iragaragara nk'igiparitse ^ Parikingi: "+ticket.getParkingDesc()+"^Yashyizwemo na: "+ticket.getConductorName()));
 //                    }
 //                }
-            
-            Ticket checkLastTicket = ticketFacade.getCustormerLastTicket(request.getInput());
-            if(checkLastTicket != null){
-                if(checkLastTicket.getOutDate() != null){
-                    long diffTime = new Date().getTime() - checkLastTicket.getInDate().getTime();
-                    long durationMinutes = TimeUnit.MILLISECONDS.toMinutes(diffTime)/ 60;
-                    
-                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+" elapsed minutes from last ticket: "+durationMinutes+" minutes or "+diffTime+" milliseconds.");
-                        
-                    if(durationMinutes < 60){
-                        out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+" has remained time before an hour get elapsed: "+durationMinutes+" minutes");
-                        return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^ Iyi Imodoka. "+checkLastTicket.getNumberPlate()+" iracyafite iminota "+(60-durationMinutes)+" kugirango isaha ishire.^ Yinjiriye muri Parikingi: "+checkLastTicket.getParkingDesc()+"^Yashyizwemo na: "+checkLastTicket.getConductorName()));
-                    }
-                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+"  elapsed minutes from last ticket: "+durationMinutes+" minutes");
-                        
-                }else{
-                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" already parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId());
-                    return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^ Iyi Imodoka. "+checkLastTicket.getNumberPlate()+" iragaragara nk'igiparitse ^ Parikingi: "+checkLastTicket.getParkingDesc()+"^Yashyizwemo na: "+checkLastTicket.getConductorName()));
-                }
-            }
-            if(!ticketManager.genNewTicket(responseConductor.getConductor(), parkingBean, request.getInput())){
-                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest failed to generate ticket for: "+request.getInput());
-                return ReturnConfig.isSuccess(faillureGen(request, conductorNames+" Ibyo mushaka ntibibonetse.^Mwongere mukanya."));
-            }
-            
-            out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest Succeeded to generate ticket for: "+request.getInput());
-            return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Gushyira Imodoka. "+request.getInput()+" muri parikingi.^Birakozwe."));
-            
+
+Ticket checkLastTicket = ticketFacade.getCustormerLastTicket(request.getInput());
+
+if(checkLastTicket != null){
+    if(checkLastTicket.getOutDate() != null){
+        DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");
+        out.print(AppDesc.APP_DESC+" UssdProcessor genNewTicket last ticket: "+checkLastTicket.getTicketId()+" startDate: "+dateFormat.parse(dateFormat.format(checkLastTicket.getInDate())));
+        Date startDate = dateFormat.parse(dateFormat.format(checkLastTicket.getInDate()));
+        
+        
+        Date endDate = dateFormat.parse(dateFormat.format(new Date()));
+        out.print(AppDesc.APP_DESC+" UssdProcessor genNewTicket tiacket endDate: "+endDate);
+        
+        long durationMinutes = DataFactory.printDifference(startDate, endDate);
+        out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+" elapsed minutes from last ticket: "+durationMinutes+" minutes.");
+        
+        if(durationMinutes < 60){
+            out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+" has remained time before an hour get elapsed: "+durationMinutes+" minutes");
+            return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^ Iyi Imodoka. "+checkLastTicket.getNumberPlate()+" iracyafite iminota "+(60-durationMinutes)+" kugirango isaha ishire.^ Yinjiriye muri Parikingi: "+checkLastTicket.getParkingDesc()+"^Yashyizwemo na: "+checkLastTicket.getConductorName()));
+        }
+        out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+"  elapsed minutes from last ticket: "+durationMinutes+" minutes");
+        
+    }else{
+        out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" already parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId());
+        return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^ Iyi Imodoka. "+checkLastTicket.getNumberPlate()+" iragaragara nk'igiparitse ^ Parikingi: "+checkLastTicket.getParkingDesc()+"^Yashyizwemo na: "+checkLastTicket.getConductorName()));
+    }
+}
+if(!ticketManager.genNewTicket(responseConductor.getConductor(), parkingBean, request.getInput())){
+    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest failed to generate ticket for: "+request.getInput());
+    return ReturnConfig.isSuccess(faillureGen(request, conductorNames+" Ibyo mushaka ntibibonetse.^Mwongere mukanya."));
+}
+
+out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest Succeeded to generate ticket for: "+request.getInput());
+return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Gushyira Imodoka. "+request.getInput()+" muri parikingi.^Birakozwe."));
+
         }catch(Exception e){
             out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest action failed due to: "+e.getMessage());
             return ReturnConfig.isSuccess(faillureGen(request,"KVCS PARKING SYSTEM^Ibyo mushaka ntibibonetse.^Mwongere mukanya."));
