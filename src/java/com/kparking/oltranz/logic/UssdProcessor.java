@@ -116,17 +116,18 @@ if(checkLastTicket != null){
         out.print(AppDesc.APP_DESC+" UssdProcessor genNewTicket last ticket: "+checkLastTicket.getTicketId()+" startDate: "+dateFormat.parse(dateFormat.format(checkLastTicket.getInDate())));
         Date startDate = dateFormat.parse(dateFormat.format(checkLastTicket.getInDate()));
         
+        Date date = new Date();
         
         Date endDate = dateFormat.parse(dateFormat.format(new Date()));
         out.print(AppDesc.APP_DESC+" UssdProcessor genNewTicket ticket endDate: "+endDate);
         
         long durationMinutes = DataFactory.printDifference(startDate, endDate);
         out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+" elapsed minutes from last ticket: "+durationMinutes+" minutes.");
-        
-        if(durationMinutes < 60){
-            out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+" has remained time before an hour get elapsed: "+durationMinutes+" minutes");
-            return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^ Iyi Imodoka. "+checkLastTicket.getNumberPlate()+" iracyafite iminota "+(60-durationMinutes)+" kugirango isaha ishire.^ Yinjiriye muri Parikingi: "+checkLastTicket.getParkingDesc()+"^Yashyizwemo na: "+checkLastTicket.getConductorName()));
-        }
+        if(checkLastTicket.getInDate().compareTo(date) < 0)
+            if(durationMinutes < 60){
+                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+" has remained time before an hour get elapsed: "+durationMinutes+" minutes");
+                return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^ Iyi Imodoka. "+checkLastTicket.getNumberPlate()+" iracyafite iminota "+(60-durationMinutes)+" kugirango isaha ishire.^ Yinjiriye muri Parikingi: "+checkLastTicket.getParkingDesc()+"^Yashyizwemo na: "+checkLastTicket.getConductorName()));
+            }
         out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+"  elapsed minutes from last ticket: "+durationMinutes+" minutes");
         
     }else{
