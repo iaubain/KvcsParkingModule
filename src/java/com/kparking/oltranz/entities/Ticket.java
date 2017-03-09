@@ -56,11 +56,15 @@ public class Ticket implements Serializable {
     @Column(name="outDate", nullable = true)
     @Temporal(javax.persistence.TemporalType.TIMESTAMP)
     private Date outDate;
+    @Column(name="ticketType", nullable = false)
+    private String ticketType;
+    @Column(name="recorded", nullable = false)
+    private boolean recorded;
     
     public Ticket() {
     }
-    
-    public Ticket(String ticketId, String numberPlate, String msisdn, String conductorId, String conductorName, String parkingId, String parkingDesc, Date inDate, Date outDate) {
+
+    public Ticket(String ticketId, String numberPlate, String msisdn, String conductorId, String conductorName, String parkingId, String parkingDesc, Date inDate, Date outDate, String ticketType, boolean recorded) {
         this.ticketId = ticketId;
         this.numberPlate = numberPlate;
         this.msisdn = msisdn;
@@ -70,7 +74,11 @@ public class Ticket implements Serializable {
         this.parkingDesc = parkingDesc;
         this.inDate = inDate;
         this.outDate = outDate;
+        this.ticketType = ticketType;
+        this.recorded = recorded;
     }
+    
+    
     
     public String getId() {
         return id;
@@ -175,6 +183,22 @@ public class Ticket implements Serializable {
     
     public void setOutDate(Date outDate) {
         this.outDate = outDate;
+    }
+
+    public String getTicketType() {
+        return ticketType;
+    }
+
+    public void setTicketType(String ticketType) {
+        this.ticketType = ticketType;
+    }
+
+    public boolean isRecorded() {
+        return recorded;
+    }
+
+    public void setRecorded(boolean recorded) {
+        this.recorded = recorded;
     }
     
 }

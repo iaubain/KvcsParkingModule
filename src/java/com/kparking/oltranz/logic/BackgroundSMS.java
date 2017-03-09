@@ -24,11 +24,14 @@ public class BackgroundSMS  implements Runnable{
     
     String message;
     
-    public BackgroundSMS(SmsSender smsSender, CustomerProvider customerProvider, Ticket ticket, String message) {
+    boolean isConductor;
+    
+    public BackgroundSMS(SmsSender smsSender, CustomerProvider customerProvider, Ticket ticket, String message, boolean isConductor) {
         this.smsSender = smsSender;
         this.customerProvider = customerProvider;
         this.ticket = ticket;
         this.message = message;
+        this.isConductor = isConductor;
     }
     
     @Override
@@ -37,11 +40,20 @@ public class BackgroundSMS  implements Runnable{
     }
     
     private void exec(){
-        try{
+        if(isConductor){
+            try{
+                smsSender.send(ticket.getMsisdn(), message);
+            }catch(Exception e){
+                out.print(AppDesc.APP_DESC+"BackgroundSMS exec sending SMS failed due to: "+e.getMessage());
+            }
+        }else{
+            try{
                 smsSender.send(customerProvider.genMsisdn(ticket.getNumberPlate(), ticket.getMsisdn()), message);
-        }catch(Exception e){
-            out.print(AppDesc.APP_DESC+"BackgroundSMS exec sending SMS failed due to: "+e.getMessage());
+            }catch(Exception e){
+                out.print(AppDesc.APP_DESC+"BackgroundSMS exec sending SMS failed due to: "+e.getMessage());
+            }
         }
+        
     }
     
 }

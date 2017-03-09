@@ -33,23 +33,5 @@ public class CustomerProvider {
         }else{
             return initMsisdn;
         }
-//        switch(checkPlate){
-//            case "RAD520E":
-//                return "250788312609";
-//            case "RAD000E":
-//                return "250785534672";
-//            case "RAD120D":
-//                return "250736864662";
-//            case "RAD001Q":
-//                return "250788625722";
-//            case "RAD002W":
-//                return "250788251119";
-//            case "RAD003E":
-//                return "25086367970";
-//            case "RAD004R":
-//                return "250736864662";
-//            default:
-//                return initMsisdn;
-//        }
     }
 }

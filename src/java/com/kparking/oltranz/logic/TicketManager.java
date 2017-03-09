@@ -12,8 +12,10 @@ import com.kparking.oltranz.config.AppDesc;
 import com.kparking.oltranz.config.SMSConfig;
 import com.kparking.oltranz.config.StatusConfig;
 import com.kparking.oltranz.entities.CallBack;
+import com.kparking.oltranz.entities.Progressive;
 import com.kparking.oltranz.entities.Ticket;
 import com.kparking.oltranz.facades.CallBackFacade;
+import com.kparking.oltranz.facades.ProgressiveFacade;
 import com.kparking.oltranz.facades.TicketFacade;
 import com.kparking.oltranz.simplebeans.commonbeans.ConductorBean;
 import com.kparking.oltranz.simplebeans.commonbeans.ParkingBean;
@@ -55,19 +57,35 @@ public class TicketManager {
             SmsSender smsSender;
     @EJB
             CustomerProvider customerProvider;
-    public boolean genNewTicket(ConductorBean conductorBean, ParkingBean parkingBean, String numberPlate){
+    @EJB
+            ProgressiveFacade progressiveFacade;
+    public boolean genNewTicket(ConductorBean conductorBean, ParkingBean parkingBean, String initmsisdn){
         try{
+            Progressive progressive = progressiveFacade.getConductorProgressive(initmsisdn);
+            if(progressive == null){
+                out.print(AppDesc.APP_DESC+"TicketManager genNewTicket no progressive found for "+initmsisdn);
+                return false;
+            }
+            if(progressive.getNumberPlate() == null || progressive.getTicketType()== null){
+                out.print(AppDesc.APP_DESC+"TicketManager genNewTicket null value in progressive number plate or ticketNumber for: "+initmsisdn);
+                return false;
+            }
             Ticket ticket = new Ticket(idGenerator(),
-                    numberPlate,
+                    progressive.getNumberPlate(),
                     conductorBean.getTel(),
                     conductorBean.getConductorId(),
                     conductorBean.getFirstName() != null?conductorBean.getFirstName():"" +conductorBean.getMiddleName()!= null?conductorBean.getMiddleName():"" + conductorBean.getLastName()!= null?conductorBean.getLastName():"",
                     parkingBean.getParkingId(),
                     parkingBean.getDescription(),
                     new Date(),
-                    null);
+                    null,
+                    progressive.getTicketType(),
+                    false);
             ticketFacade.create(ticket);
             ticketFacade.refreshTicket();
+            
+            progressiveFacade.remove(progressive);
+            progressiveFacade.refreshProgressive();
             
             CallBack callBack = callBackFacade.getTicketById(ticket.getTicketId());
             if(callBack == null){
@@ -118,7 +136,7 @@ public class TicketManager {
             
             createSchedule(mJob);
             
-            Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, ticket, SMSConfig.CAR_IN_MSG+ticket.getNumberPlate()+" "+ticket.getParkingDesc()+" / "+timestamp));
+            Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, ticket, SMSConfig.CAR_IN_MSG+ticket.getNumberPlate()+" "+ticket.getParkingDesc()+" / "+timestamp, false));
             smsThread.start();
             
             return true;
@@ -150,7 +168,7 @@ public class TicketManager {
                 }
                 DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");
                 
-                Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, oTicket, SMSConfig.CAR_OUT_MSG+oTicket.getNumberPlate()+" "+oTicket.getParkingDesc()+"/"+dateFormat.format(date)));
+                Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, oTicket, SMSConfig.CAR_OUT_MSG+oTicket.getNumberPlate()+" "+oTicket.getParkingDesc()+"/"+dateFormat.format(date), false));
                 smsThread.start();
             }
             if(oTicket.getOutDate() != null){
@@ -214,8 +232,11 @@ public class TicketManager {
             oTicket.setOutDate(new Date());
             ticketFacade.edit(oTicket);
             long elapsedTime = elapsed(callBack.getCreatedOn(), date);
-            Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, checkTicket, SMSConfig.CAR_ADDED_VALUE+" isaha "+elapsedTime+" (z)irashize, hour(s) elapsed, heure(s) ecoule "+oTicket.getNumberPlate()+" / "+oTicket.getParkingDesc()));
+            Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, checkTicket, SMSConfig.CAR_ADDED_VALUE+" isaha "+elapsedTime+" (z)irashize, hour(s) elapsed, heure(s) ecoule "+oTicket.getNumberPlate()+" / "+oTicket.getParkingDesc(), false));
             smsThread.start();
+            
+            Thread smsThread2 = new Thread(new BackgroundSMS(smsSender, customerProvider, checkTicket, oTicket.getConductorName()+" isaha "+elapsedTime+" (z)irashize "+oTicket.getNumberPlate()+" iri muri parking: "+oTicket.getParkingDesc(), true));
+            smsThread2.start();
             
             Ticket nTicket = new Ticket(idGenerator(),
                     oTicket.getNumberPlate(),
@@ -225,7 +246,9 @@ public class TicketManager {
                     oTicket.getParkingId(),
                     oTicket.getParkingDesc(),
                     date,
-                    null);
+                    null,
+                    oTicket.getTicketType(),
+                    false);
             ticketFacade.create(nTicket);
             ticketFacade.refreshTicket();
             return true;
@@ -237,7 +260,7 @@ public class TicketManager {
     
     public static long elapsed(Date startDate, Date endDate) {
         long diffMills = endDate.getTime() - startDate.getTime();
-        return (diffMills/1000)/60;
+        return (diffMills/1000)/3600;
     }
     
     private void createSchedule(MyJob mJob){

@@ -13,8 +13,6 @@ import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import static java.lang.System.out;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -170,13 +168,14 @@ public class DataFactory {
     
     public static final long printDifference(Date startDate, Date endDate){
         
-        DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");
         //milliseconds
         long different = endDate.getTime() - startDate.getTime();
+        long elapsedTime = elapsed(startDate, endDate);
         
         out.println(AppDesc.APP_DESC+" DataFactory printDifference startDate : " + startDate);
         out.println(AppDesc.APP_DESC+" DataFactory printDifference endDate : "+ endDate);
         out.println(AppDesc.APP_DESC+" DataFactory printDifference difference in millisecond : " + different);
+        out.println(AppDesc.APP_DESC+" DataFactory printDifference Elapsed minutes: " + elapsedTime);
         
         long secondsInMilli = 1000;
         long minutesInMilli = secondsInMilli * 60;
@@ -199,7 +198,7 @@ public class DataFactory {
                 elapsedDays,
                 elapsedHours, elapsedMinutes, elapsedSeconds);
         
-        return elapsedMinutes;
+        return elapsedTime;
     }
     
     public static final boolean numberPlateValidator(String numberPlate){
@@ -229,5 +228,9 @@ public class DataFactory {
         }
         out.print(AppDesc.APP_DESC+"DataFactory numberPlateValidator NO MATCH for: "+numberPlate);
         return false;
+    }
+    private static long elapsed(Date startDate, Date endDate) {
+        long diffMills = endDate.getTime() - startDate.getTime();
+        return (diffMills/1000)/60;
     }
 }
