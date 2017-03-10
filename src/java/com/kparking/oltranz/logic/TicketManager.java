@@ -61,7 +61,7 @@ public class TicketManager {
             ProgressiveFacade progressiveFacade;
     public boolean genNewTicket(ConductorBean conductorBean, ParkingBean parkingBean, String initmsisdn){
         try{
-            Progressive progressive = progressiveFacade.getConductorProgressive(initmsisdn);
+            Progressive progressive = progressiveFacade.getConductorLastProgressive(initmsisdn);
             if(progressive == null){
                 out.print(AppDesc.APP_DESC+"TicketManager genNewTicket no progressive found for "+initmsisdn);
                 return false;
@@ -84,7 +84,8 @@ public class TicketManager {
             ticketFacade.create(ticket);
             ticketFacade.refreshTicket();
             
-            progressiveFacade.remove(progressive);
+            progressive.setIsFinished(true);
+            progressiveFacade.edit(progressive);
             progressiveFacade.refreshProgressive();
             
             CallBack callBack = callBackFacade.getTicketById(ticket.getTicketId());

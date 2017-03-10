@@ -1,8 +1,8 @@
 /*
-* To change this license header, choose License Headers in Project Properties.
-* To change this template file, choose Tools | Templates
-* and open the template in the editor.
-*/
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
 package com.kparking.oltranz.entities;
 
 import java.io.Serializable;
@@ -12,10 +12,7 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.Table;
-import javax.persistence.TableGenerator;
 import javax.persistence.Temporal;
-import javax.persistence.UniqueConstraint;
 
 /**
  *
@@ -23,17 +20,11 @@ import javax.persistence.UniqueConstraint;
  * aubain.c.ishimwe@oltranz.com Tel: +250 785 534 672 / +250 736 864 662
  */
 @Entity
-@Table(name = "progressive",uniqueConstraints = {@UniqueConstraint(columnNames = {"progressId"})})
-public class Progressive implements Serializable {
-    
+public class UnfinishedTicket implements Serializable {
+
     private static final long serialVersionUID = 1L;
     @Id
-    @TableGenerator(name="ProgressiveSeqGen",
-            table="SEQUENCE_PROGRESSIVE",
-            pkColumnName="SEQ_NAME",
-            valueColumnName="SEQ_COUNT",
-            pkColumnValue="PROGRESSIVE_SEQ")
-    @GeneratedValue(strategy=GenerationType.TABLE, generator="ProgressiveSeqGen")
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
     @Column(name="progressId", length = 522, nullable = false, unique = true)
             private String progressId;
@@ -51,11 +42,13 @@ public class Progressive implements Serializable {
             private Date expireIn;
     @Column(name="isFinished")
     private boolean isFinished;
+    @Column(name="count", length = 10, nullable = false)
+    private int count;
 
-    public Progressive() {
+    public UnfinishedTicket() {
     }
 
-    public Progressive(String progressId, String initMsisdn, String numberPlate, String ticketType, Date createdOn, Date expireIn, boolean isFinished) {
+    public UnfinishedTicket(String progressId, String initMsisdn, String numberPlate, String ticketType, Date createdOn, Date expireIn, boolean isFinished, int count) {
         this.progressId = progressId;
         this.initMsisdn = initMsisdn;
         this.numberPlate = numberPlate;
@@ -63,39 +56,48 @@ public class Progressive implements Serializable {
         this.createdOn = createdOn;
         this.expireIn = expireIn;
         this.isFinished = isFinished;
+        this.count = count;
     }
 
     public Long getId() {
         return id;
     }
-    
+
     public void setId(Long id) {
         this.id = id;
     }
-    
+
     @Override
     public int hashCode() {
         int hash = 0;
         hash += (id != null ? id.hashCode() : 0);
         return hash;
     }
-    
+
     @Override
     public boolean equals(Object object) {
         // TODO: Warning - this method won't work in the case the id fields are not set
-        if (!(object instanceof Progressive)) {
+        if (!(object instanceof UnfinishedTicket)) {
             return false;
         }
-        Progressive other = (Progressive) object;
+        UnfinishedTicket other = (UnfinishedTicket) object;
         if ((this.id == null && other.id != null) || (this.id != null && !this.id.equals(other.id))) {
             return false;
         }
         return true;
     }
-    
+
     @Override
     public String toString() {
-        return "com.kparking.oltranz.entities.Progressive[ id=" + id + " ]";
+        return "com.kparking.oltranz.entities.UnfinishedTicket[ id=" + id + " ]";
+    }
+
+    public String getProgressId() {
+        return progressId;
+    }
+
+    public void setProgressId(String progressId) {
+        this.progressId = progressId;
     }
 
     public String getInitMsisdn() {
@@ -146,12 +148,12 @@ public class Progressive implements Serializable {
         this.isFinished = isFinished;
     }
 
-    public String getProgressId() {
-        return progressId;
+    public int getCount() {
+        return count;
     }
 
-    public void setProgressId(String progressId) {
-        this.progressId = progressId;
+    public void setCount(int count) {
+        this.count = count;
     }
     
 }

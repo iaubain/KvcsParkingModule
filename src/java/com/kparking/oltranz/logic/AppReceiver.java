@@ -35,4 +35,7 @@ public class AppReceiver {
     public Response scheduleCallBack(String sourceIp, int sourcePort, HttpHeaders headers, String body){
         return callBackHandler.callBackreceiver(headers);
     }
+    public Response progressCallBack(String sourceIp, int sourcePort, HttpHeaders headers, String body){
+        return callBackHandler.progressCallBack(headers);
+    }
 }

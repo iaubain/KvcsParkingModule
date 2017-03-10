@@ -22,4 +22,5 @@ public class ApiConfig {
     public static final String SMS_URL = "http://localhost:8080/SMSServiceProvider/sendSMS";
     
     public static final String CALLBACK_URL = "http://localhost:8080/Kparking/system/schedCallBack";
+    public static final String PROGRESS_CALLBACK_URL = "http://localhost:8080/Kparking/system/progressCallBack";
 }

@@ -31,7 +31,7 @@ public class Car implements Serializable {
             valueColumnName="SEQ_COUNT",
             pkColumnValue="CAR_SEQ")
     @GeneratedValue(strategy=GenerationType.TABLE, generator="CarSeqGen")
-    private String id;
+    private Long id;
     @Column(name="numberPlate", length = 522, nullable = false)
             private String numberPlate;
     @Column(name="creatorTel", length = 522, nullable = false)
@@ -52,11 +52,11 @@ public class Car implements Serializable {
         this.created = created;
     }
     
-    public String getId() {
+    public Long getId() {
         return id;
     }
     
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
     }
     

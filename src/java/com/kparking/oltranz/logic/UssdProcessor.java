@@ -6,6 +6,8 @@
 package com.kparking.oltranz.logic;
 
 import com.kparking.oltranz.apiclient.ApInterface;
+import com.kparking.oltranz.apiclient.OpenExternal;
+import com.kparking.oltranz.config.ApiConfig;
 import com.kparking.oltranz.config.AppDesc;
 import com.kparking.oltranz.entities.CallBack;
 import com.kparking.oltranz.entities.Car;
@@ -19,6 +21,9 @@ import com.kparking.oltranz.simplebeans.commonbeans.ConductorBean;
 import com.kparking.oltranz.simplebeans.commonbeans.ParkingBean;
 import com.kparking.oltranz.simplebeans.conductors.ResponseConductor;
 import com.kparking.oltranz.simplebeans.deployment.ResponseDeployment;
+import com.kparking.oltranz.simplebeans.schedule.JobTasks;
+import com.kparking.oltranz.simplebeans.schedule.MyFrequency;
+import com.kparking.oltranz.simplebeans.schedule.MyJob;
 import com.kparking.oltranz.simplebeans.ussdbeans.Menu;
 import com.kparking.oltranz.simplebeans.ussdbeans.UssdRequest;
 import com.kparking.oltranz.simplebeans.ussdbeans.UssdResponse;
@@ -26,11 +31,15 @@ import com.kparking.oltranz.utilities.DataFactory;
 import com.kparking.oltranz.utilities.IdGenerator;
 import com.kparking.oltranz.utilities.ReturnConfig;
 import static java.lang.System.out;
+import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.ws.rs.core.Response;
@@ -62,6 +71,8 @@ public class UssdProcessor {
             CarFacade carFacade;
     @EJB
             ProgressiveFacade progressiveFacade;
+    @EJB
+            OpenExternal openExternal;
     private String nPlate;
     public Response receiveCarInRequest(UssdRequest request){
         try{
@@ -74,6 +85,14 @@ public class UssdProcessor {
                     out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest no conductor found for: "+request.getMsisdn());
                     return ReturnConfig.isSuccess(faillureGen(request, "Ibyo mushaka ntibibashije kuboneka.^Mwongere mukanya."));
                 }
+                Progressive progressive = progressiveFacade.getConductorLastUnfinishedProgressive(request.getMsisdn(), false);
+                if(progressive != null){
+                    ConductorBean conductorBean = responseConductor.getConductor();
+                    String conductorNames = conductorBean.getFirstName() != null?conductorBean.getFirstName():"" +conductorBean.getMiddleName()!= null?conductorBean.getMiddleName():"" + conductorBean.getLastName()!= null?conductorBean.getLastName():"";
+                    
+                    return ReturnConfig.isSuccess(continueInput(conductorNames+"^Andika neza ubwoko bwatike.^Imodoka: "+progressive.getNumberPlate()+"^1. 100Rwf^2. 200Rwf^3. 400Rwf^4. 1000Rwf",request));
+                }
+                
                 return ReturnConfig.isSuccess(carInOutMenu("Guparika^",request));
             }
             
@@ -86,9 +105,9 @@ public class UssdProcessor {
             ConductorBean conductorBean = responseConductor.getConductor();
             String conductorNames = conductorBean.getFirstName() != null?conductorBean.getFirstName():"" +conductorBean.getMiddleName()!= null?conductorBean.getMiddleName():"" + conductorBean.getLastName()!= null?conductorBean.getLastName():"";
             
-            Progressive progressive = progressiveFacade.getConductorProgressive(request.getMsisdn());
+            Progressive progressive = progressiveFacade.getConductorLastUnfinishedProgressive(request.getMsisdn(), false);
             if(progressive != null){
-                
+             this.nPlate = progressive.getNumberPlate();
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest progressive found for: "+request.getMsisdn());
                 switch(request.getInput()){
                     case "1":
@@ -112,35 +131,66 @@ public class UssdProcessor {
                     out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
                     return ReturnConfig.isSuccess(faillureGen(request, "Ikaze, "+conductorNames+"^Plaque: "+request.getInput()+" Reba niba yanditse neza."));
                 }
-                nPlate = request.getInput();
-                progressive = new Progressive(request.getMsisdn(),
+                
+                this.nPlate = request.getInput();
+                
+                progressive = new Progressive(idGenerator(),
+                        request.getMsisdn(),
                         request.getInput(),
-                        "100",
+                        "0",
                         date,
-                        date);
+                        date,
+                        false);
                 progressiveFacade.create(progressive);
                 progressiveFacade.refreshProgressive();
+                //Get the current date
+                DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");
+                Timestamp timestamp = new Timestamp(new Date().getTime());
+                Calendar calendar = Calendar.getInstance();
+                
+                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest Schedule for progressive initiator: "+progressive.getInitMsisdn()+", number plate"+progressive.getNumberPlate()+" and ID: "+progressive.getId()+" . Trigered: "+timestamp);
+                
+                //add 3 minutes to the current date
+                calendar.setTimeInMillis(timestamp.getTime());
+                calendar.add(Calendar.MINUTE, 9);
+                timestamp = new Timestamp(calendar.getTime().getTime());
+                
+                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest Schedule for progressive initiator: "+progressive.getInitMsisdn()+", number plate"+progressive.getNumberPlate()+" and ID: "+progressive.getId()+" will expire on: "+timestamp);
+                MyFrequency myFrequency = new MyFrequency("minute", "180000");
+                List<JobTasks> mTasks = new ArrayList<>();
+                JobTasks jobTasks = new JobTasks(progressive.getProgressId(),
+                        getClass().getName(),
+                        myFrequency,
+                        ApiConfig.PROGRESS_CALLBACK_URL,
+                        1);
+                mTasks.add(jobTasks);
+                
+                MyJob mJob = new MyJob(progressive.getProgressId(),
+                        "daily",
+                        getClass().getName(),
+                        ApiConfig.PROGRESS_CALLBACK_URL,
+                        dateFormat.format(timestamp),
+                        true,
+                        myFrequency,
+                        mTasks);
+                createSchedule(mJob);
+                
                 return ReturnConfig.isSuccess(continueInput(conductorNames+"^Andika ubwoko bwatike.^Imodoka: "+request.getInput()+"^1. 100Rwf^2. 200Rwf^3. 400Rwf^4. 1000Rwf",request));
             }
             
-            progressiveFacade.edit(progressive);
-            progressiveFacade.refreshProgressive();
+            
             
             Thread.sleep(10);
             
             
             List<ResponseDeployment> mDeploymetList =(List<ResponseDeployment>)(Object)DataFactory.stringToObjectList(ResponseDeployment.class, apInterface.getConductorDep(responseConductor.getConductor().getConductorId()));
             if(mDeploymetList == null){
-                progressiveFacade.remove(progressive);
-                progressiveFacade.refreshProgressive();
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest no available parking found for: "+request.getMsisdn() +" of: "+conductorBean.getFirstName());
                 return ReturnConfig.isSuccess(faillureGen(request, "Ikaze, "+conductorNames+"^Nta parikingi mwashyizwemo."));
             }
             ResponseDeployment mDeployment = mDeploymetList.get(0);
             ParkingBean parkingBean = mDeployment.getParking();
             if(parkingBean == null){
-                progressiveFacade.remove(progressive);
-                progressiveFacade.refreshProgressive();
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest no available parking found for: "+request.getMsisdn() +" of: "+conductorBean.getFirstName());
                 return ReturnConfig.isSuccess(faillureGen(request, "Ikaze, "+conductorNames+"^Nta parikingi mwashyizwemo."));
             }
@@ -170,17 +220,19 @@ public class UssdProcessor {
                     long durationMinutes = DataFactory.printDifference(startDate, endDate);
                     out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+" elapsed minutes from last ticket: "+durationMinutes+" minutes.");
                     if(checkLastTicket.getInDate().compareTo(date) < 0)
-                        if(durationMinutes < 60){
-                            progressiveFacade.remove(progressive);
-                            progressiveFacade.refreshProgressive();
+                        if(durationMinutes > 0 && durationMinutes < 60){
+                            
+                            progressive.setIsFinished(true);
+                            progressiveFacade.edit(progressive);
+                            
                             out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+" has remained time before an hour get elapsed: "+durationMinutes+" minutes");
                             return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^ Iyi Imodoka. "+checkLastTicket.getNumberPlate()+" iracyafite iminota "+(60-durationMinutes)+" kugirango isaha ishire.^ Yinjiriye muri Parikingi: "+checkLastTicket.getParkingDesc()+"^Yashyizwemo na: "+checkLastTicket.getConductorName()));
                         }
                     out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+"  elapsed minutes from last ticket: "+durationMinutes+" minutes");
                     
                 }else{
-                    progressiveFacade.remove(progressive);
-                    progressiveFacade.refreshProgressive();
+                    progressive.setIsFinished(true);
+                    progressiveFacade.edit(progressive);
                     out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" already parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId());
                     return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^ Iyi Imodoka. "+checkLastTicket.getNumberPlate()+" iragaragara nk'igiparitse ^ Parikingi: "+checkLastTicket.getParkingDesc()+"^Yashyizwemo na: "+checkLastTicket.getConductorName()));
                 }
@@ -409,5 +461,32 @@ public class UssdProcessor {
         outPut = DataFactory.objectToXmlString(response);
         
         return outPut;
+    }
+    
+    private void createSchedule(MyJob mJob){
+        out.print(AppDesc.APP_DESC+"UssdProcessor createSchedule creating a schedule: "+mJob.getJobId());
+        
+        Thread thread = new Thread(new BackgroundSchedule(true, mJob, openExternal, apInterface));
+        thread.start();
+    }
+    
+    private String idGenerator(){
+        String genId = idGenerator.generate();
+        try {
+            boolean check = false;
+            do{
+                Progressive progressive = progressiveFacade.getProgressById(genId);
+                if(progressive == null){
+                    return genId;
+                }
+                genId = idGenerator.generate();
+            }while(!check);
+            Thread.sleep(100);
+        } catch (InterruptedException ex) {
+            out.print(AppDesc.APP_DESC+"UssdProcessor idGenerator thread sleep failed due to: "+ ex.getLocalizedMessage());
+            Logger.getLogger(UssdProcessor.class.getName()).log(Level.SEVERE, null, ex);
+            return genId;
+        }
+        return genId;
     }
 }

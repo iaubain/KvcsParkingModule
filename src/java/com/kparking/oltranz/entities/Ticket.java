@@ -28,13 +28,13 @@ public class Ticket implements Serializable {
     
     private static final long serialVersionUID = 1L;
     @Id
-    @TableGenerator(name="TicketSeqGen", 
-            table="SEQUENCE_TICKET", 
+    @TableGenerator(name="TicketSeqGen",
+            table="SEQUENCE_TICKET",
             pkColumnName="SEQ_NAME",
-            valueColumnName="SEQ_COUNT", 
+            valueColumnName="SEQ_COUNT",
             pkColumnValue="TICKET_SEQ")
     @GeneratedValue(strategy=GenerationType.TABLE, generator="TicketSeqGen")
-    private String id;
+    private Long id;
     
     @Column(name="ticketId", length = 522, nullable = false, unique = true)
     private String ticketId;
@@ -63,7 +63,7 @@ public class Ticket implements Serializable {
     
     public Ticket() {
     }
-
+    
     public Ticket(String ticketId, String numberPlate, String msisdn, String conductorId, String conductorName, String parkingId, String parkingDesc, Date inDate, Date outDate, String ticketType, boolean recorded) {
         this.ticketId = ticketId;
         this.numberPlate = numberPlate;
@@ -80,11 +80,11 @@ public class Ticket implements Serializable {
     
     
     
-    public String getId() {
+    public Long getId() {
         return id;
     }
     
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
     }
     
@@ -184,19 +184,19 @@ public class Ticket implements Serializable {
     public void setOutDate(Date outDate) {
         this.outDate = outDate;
     }
-
+    
     public String getTicketType() {
         return ticketType;
     }
-
+    
     public void setTicketType(String ticketType) {
         this.ticketType = ticketType;
     }
-
+    
     public boolean isRecorded() {
         return recorded;
     }
-
+    
     public void setRecorded(boolean recorded) {
         this.recorded = recorded;
     }

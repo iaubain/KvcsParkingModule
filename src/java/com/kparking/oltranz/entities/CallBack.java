@@ -34,7 +34,7 @@ public class CallBack implements Serializable {
             valueColumnName="SEQ_COUNT",
             pkColumnValue="CALLBACK_SEQ")
     @GeneratedValue(strategy=GenerationType.TABLE, generator="CallBackSeqGen")
-    private String id;
+    private Long id;
     
     @Column(name="ticketId", length = 522, nullable = false, unique = true)
     private String ticketId;
@@ -67,11 +67,11 @@ public class CallBack implements Serializable {
     
     
     
-    public String getId() {
+    public Long getId() {
         return id;
     }
     
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
     }
     

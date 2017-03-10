@@ -59,6 +59,14 @@ public class WebService {
         return appReceiver.scheduleCallBack(requestContext.getRemoteAddr(), requestContext.getRemotePort(), headers, body);//.clientReceiver(headers, body);
     }
     
+    @GET
+    @Path("/progressCallBack")
+    public Response progressCallBack(@Context HttpServletRequest requestContext, @Context HttpHeaders headers, String body){
+        out.print(AppDesc.APP_DESC+" Source IP: " + requestContext.getRemoteAddr() + ", Port: " + requestContext.getRemotePort() + ", Host: " + requestContext.getRemoteHost());
+        out.print(AppDesc.APP_DESC+" Node Received Headers "+headers.toString()+" and Body  "+body);
+        return appReceiver.progressCallBack(requestContext.getRemoteAddr(), requestContext.getRemotePort(), headers, body);//.clientReceiver(headers, body);
+    }
+    
     @POST
     @Path("/signUp")
     public Response signUpCar(@Context HttpServletRequest requestContext, @Context HttpHeaders headers, String body){
