@@ -72,6 +72,7 @@ public class TicketManager {
             }
             Ticket ticket = new Ticket(idGenerator(),
                     progressive.getNumberPlate(),
+                    "",
                     conductorBean.getTel(),
                     conductorBean.getConductorId(),
                     conductorBean.getFirstName() != null?conductorBean.getFirstName():"" +conductorBean.getMiddleName()!= null?conductorBean.getMiddleName():"" + conductorBean.getLastName()!= null?conductorBean.getLastName():"",
@@ -241,6 +242,7 @@ public class TicketManager {
             
             Ticket nTicket = new Ticket(idGenerator(),
                     oTicket.getNumberPlate(),
+                    oTicket.getCarBrand() != null?oTicket.getCarBrand():"",
                     oTicket.getMsisdn(),
                     oTicket.getConductorId(),
                     oTicket.getConductorName(),

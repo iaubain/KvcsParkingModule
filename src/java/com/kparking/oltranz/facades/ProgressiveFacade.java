@@ -71,6 +71,25 @@ public class ProgressiveFacade extends AbstractFacade<Progressive> {
         }
     }
     
+    public Progressive getCustomerLastProgressive(String msisdn, String nPlate){
+        try{
+            if(msisdn.isEmpty())
+                return null;
+            Query q= em.createQuery("Select P from Progressive P WHERE P.numberPlate = :nPlate AND P.initMsisdn = :msisdn ORDER BY P.id DESC");
+            q.setParameter("msisdn", msisdn)
+                    .setParameter("nPlate", nPlate)
+                    .setMaxResults(1);
+            List<Progressive> list = (List<Progressive>)q.getResultList();
+            if(!list.isEmpty())
+                return list.get(0);
+            else
+                return null;
+        }catch(Exception ex){
+            ex.printStackTrace(out);
+            return null;
+        }
+    }
+    
     public Progressive getConductorLastUnfinishedProgressive(String msisdn, boolean taskState){
         try{
             if(msisdn.isEmpty())

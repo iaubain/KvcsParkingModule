@@ -40,6 +40,8 @@ public class Ticket implements Serializable {
     private String ticketId;
     @Column(name="numberPlate", length = 12, nullable = false)
     private String numberPlate;
+    @Column(name="carBrand", length = 12, nullable = true)
+    private String carBrand;
     @Column(name="msisdn", length = 30, nullable = false)
     private String msisdn;
     @Column(name="conductorId", length = 522, nullable = false)
@@ -63,10 +65,11 @@ public class Ticket implements Serializable {
     
     public Ticket() {
     }
-    
-    public Ticket(String ticketId, String numberPlate, String msisdn, String conductorId, String conductorName, String parkingId, String parkingDesc, Date inDate, Date outDate, String ticketType, boolean recorded) {
+
+    public Ticket(String ticketId, String numberPlate, String carBrand, String msisdn, String conductorId, String conductorName, String parkingId, String parkingDesc, Date inDate, Date outDate, String ticketType, boolean recorded) {
         this.ticketId = ticketId;
         this.numberPlate = numberPlate;
+        this.carBrand = carBrand;
         this.msisdn = msisdn;
         this.conductorId = conductorId;
         this.conductorName = conductorName;
@@ -77,9 +80,7 @@ public class Ticket implements Serializable {
         this.ticketType = ticketType;
         this.recorded = recorded;
     }
-    
-    
-    
+        
     public Long getId() {
         return id;
     }
@@ -199,6 +200,14 @@ public class Ticket implements Serializable {
     
     public void setRecorded(boolean recorded) {
         this.recorded = recorded;
+    }
+
+    public String getCarBrand() {
+        return carBrand;
+    }
+
+    public void setCarBrand(String carBrand) {
+        this.carBrand = carBrand;
     }
     
 }

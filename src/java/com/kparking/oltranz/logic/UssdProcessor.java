@@ -107,7 +107,7 @@ public class UssdProcessor {
             
             Progressive progressive = progressiveFacade.getConductorLastUnfinishedProgressive(request.getMsisdn(), false);
             if(progressive != null){
-             this.nPlate = progressive.getNumberPlate();
+                this.nPlate = progressive.getNumberPlate();
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest progressive found for: "+request.getMsisdn());
                 switch(request.getInput()){
                     case "1":
@@ -127,6 +127,43 @@ public class UssdProcessor {
                 }
             }else{
                 Date date = new Date();
+                Ticket ticket = ticketFacade.getConductorLastTicket(request.getMsisdn());
+                if(ticket == null){
+                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest ticket not available: "+request.getMsisdn() +" of: "+conductorBean.getFirstName());
+                    return ReturnConfig.isSuccess(faillureGen(request, "Ikaze, "+conductorNames+"^Ibyomushaka ntibishobotse."));
+                }
+                progressive = progressiveFacade.getCustomerLastProgressive(request.getMsisdn(), ticket.getNumberPlate());
+                if(progressive != null){
+                    if((ticket.getCarBrand().isEmpty() || ticket.getCarBrand().equals("")) && progressive.isIsFinished()){
+                        ticket.setCarBrand(request.getInput());
+                        ticketFacade.edit(ticket);
+                        ticketFacade.refreshTicket();
+                        out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest Succeeded to set a brand to ticket for: "+ticket.getNumberPlate());
+                        return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Imodoka. "+ticket.getNumberPlate()+"^Ubwoko: "+request.getInput()+"^Iparitse: "+ticket.getParkingDesc()));
+                    }
+                    
+//                    else{
+//                        out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest failed to set car brand ticket for: "+ticket.getNumberPlate());
+//                        return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Imodoka. "+ticket.getNumberPlate()+"^Ubwoko: "+request.getInput()+"^Iparitse: "+ticket.getParkingDesc()+"^Ibyo mwanditse ntibishyizwemo."));
+//                    }
+
+
+//                    if(! DataFactory.numberPlateValidator(request.getInput())){
+//                        if(progressive.isIsFinished()){
+//                            out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput()+" and this is a brand.");
+//                            if(ticket.getCarBrand().isEmpty() || ticket.getCarBrand().equals("")){
+//                                ticket.setCarBrand(request.getInput());
+//                                ticketFacade.edit(ticket);
+//                                ticketFacade.refreshTicket();
+//                            }
+//                            out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest Succeeded to set a brand to ticket for: "+ticket.getNumberPlate());
+//                            return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Imodoka. "+ticket.getNumberPlate()+"^Ubwoko: "+request.getInput()+"^Iparitse: "+ticket.getParkingDesc()));
+//                        }
+//                    }else{
+//                        out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest Succeeded to generate ticket for: "+ticket.getNumberPlate());
+//                        return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Imodoka. "+ticket.getNumberPlate()+"^Ubwoko: "+request.getInput()+"^Iparitse: "+ticket.getParkingDesc()));
+//                    }
+                }
                 if(! DataFactory.numberPlateValidator(request.getInput())){
                     out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
                     return ReturnConfig.isSuccess(faillureGen(request, "Ikaze, "+conductorNames+"^Plaque: "+request.getInput()+" Reba niba yanditse neza."));
@@ -152,7 +189,7 @@ public class UssdProcessor {
                 
                 //add 3 minutes to the current date
                 calendar.setTimeInMillis(timestamp.getTime());
-                calendar.add(Calendar.MINUTE, 9);
+                calendar.add(Calendar.MINUTE, 21);
                 timestamp = new Timestamp(calendar.getTime().getTime());
                 
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest Schedule for progressive initiator: "+progressive.getInitMsisdn()+", number plate"+progressive.getNumberPlate()+" and ID: "+progressive.getId()+" will expire on: "+timestamp);
@@ -178,10 +215,7 @@ public class UssdProcessor {
                 return ReturnConfig.isSuccess(continueInput(conductorNames+"^Andika ubwoko bwatike.^Imodoka: "+request.getInput()+"^1. 100Rwf^2. 200Rwf^3. 400Rwf^4. 1000Rwf",request));
             }
             
-            
-            
             Thread.sleep(10);
-            
             
             List<ResponseDeployment> mDeploymetList =(List<ResponseDeployment>)(Object)DataFactory.stringToObjectList(ResponseDeployment.class, apInterface.getConductorDep(responseConductor.getConductor().getConductorId()));
             if(mDeploymetList == null){
@@ -243,7 +277,7 @@ public class UssdProcessor {
             }
             
             out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest Succeeded to generate ticket for: "+nPlate);
-            return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Gushyira Imodoka. "+nPlate+" muri parikingi.^Birakozwe."));
+            return ReturnConfig.isSuccess(continueInput(conductorNames+" ^Imodoka. "+nPlate+"^Ishyizwe muri parikingi.^Andika ubwoko", request));
             
         }catch(Exception e){
             out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest action failed due to: "+e.getMessage());
@@ -281,25 +315,22 @@ public class UssdProcessor {
                 return ReturnConfig.isSuccess(faillureGen(request, "Ikaze, "+conductorNames+"^Plaque: "+request.getInput()+" Reba niba yanditse neza."));
             }
             
-            
-            List<Ticket> todayTickets = ticketFacade.getTicketsByNumberPlate(request.getInput());
-            int check=0;
-            if(todayTickets != null){
-                for(Ticket ticket : todayTickets){
-                    if(ticket.getOutDate() == null){
-                        check++;
-                    }
-                }
-            }
-            
-            if(check <= 0){
+            Ticket ticket = ticketFacade.getCustormerLastTicket(request.getInput());
+            if(ticket == null){
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+request.getInput()+" with no ticket: by conductor: "+request.getMsisdn());
-                return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"Iyi Imodoka. "+request.getInput()+"^Ntago irikugaragara muri parikingi."));
+                return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Imodoka. "+request.getInput()+"^Ntago ibonetse."));
             }
-            
+            if(ticket.getOutDate() != null){
+                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+request.getInput()+" with ticket: "+ticket.getTicketId()+" by conductor: "+request.getMsisdn());
+                return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Imodoka. "+request.getInput()+"^Yamaze gukurwa muri parikingi.^Isaha yakuwemo: "+ticket.getOutDate()));
+            }
+            if(!ticket.getConductorId().equals(conductorBean.getConductorId())){
+                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+request.getInput()+" with ticket: "+ticket.getTicketId()+" request by conductor: "+request.getMsisdn()+" Initiated by: "+ticket.getConductorId());
+                return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Imodoka. "+request.getInput()+"^Yashyizwe muri parking na: "+ticket.getConductorName()+"^Saa: "+ticket.getOutDate()+"^Kuri: "+ticket.getParkingDesc()));
+            }
             if(!ticketManager.setTicketOutDate(true, request.getInput())){
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarOut action failed due to: numberPlate "+request.getInput()+" not found");
-                return ReturnConfig.isSuccess(faillureGen(request, conductorNames+" Ibyo mushaka ntibibonetse.^Mwongere mukanya."));
+                return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Ibyo mushaka ntibibonetse.^Mwongere mukanya."));
             }
             out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarOut Succeeded to take out car"+request.getInput());
             return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Gukura imodoka. "+request.getInput()+" muri parikingi.^Birakozwe."));

@@ -93,30 +93,32 @@ public class CallBackHandler {
                             0);
                     unfinishedTicketFacade.create(unfinishedTicket);
                     unfinishedTicketFacade.refreshUnFinTicket();
-                    //send sms to conductor(Init ID)
-                    Ticket ticket = new Ticket();
-                    ticket.setMsisdn(progressive.getInitMsisdn());
-                    Thread smsThread = new Thread(new BackgroundSMS(smsSender, null, ticket, "Imodoka: "+progressive.getNumberPlate()+" ifite agaticket utarangije. Wayandikiye: "+progressive.getCreatedOn(), true));
-                    smsThread.start();
                 }else{
                     out.print(AppDesc.APP_DESC+"CallBackHandler progressCallBack updating initial unfinished ticket: "+jobId+" with a count: "+unfinishedTicket.getCount());
-                    if(unfinishedTicket.getCount() == 0){
-                        unfinishedTicket.setCount(1);
+                    if(unfinishedTicket.getCount() <= 0){
+                        unfinishedTicket.setCount(unfinishedTicket.getCount()+1);
                         unfinishedTicketFacade.edit(unfinishedTicket);
                         unfinishedTicketFacade.refreshUnFinTicket();
+                        
+                        //send sms to conductor(Init ID)
+                        Ticket ticket = new Ticket();
+                        ticket.setMsisdn(progressive.getInitMsisdn());
+                        if(unfinishedTicket.getCount()<=6){
+                            Thread smsThread = new Thread(new BackgroundSMS(smsSender, null, ticket, "Imodoka: "+progressive.getNumberPlate()+" ifite agaticket utarangije. Wayandikiye: "+progressive.getCreatedOn(), true));
+                            smsThread.start();
+                        }else{
+                            //send notification on admin eMail // I will implement this later
+                        }
                     }
                     out.print(AppDesc.APP_DESC+"CallBackHandler progressCallBack removing progressive task: "+jobId+" of initiator: "+progressive.getInitMsisdn());
                     
-                    progressiveFacade.remove(progressive);
                 }
-            }else{
-                progressiveFacade.remove(progressive);
             }
             out.print(AppDesc.APP_DESC+"CallBackHandler progressCallBack succeeded to generate additional tictet JobId: "+jobId+" with a status: "+status);
             return ReturnConfig.isSuccess("Success");
         } catch (Exception e) {
             out.print(AppDesc.APP_DESC+"CallBackHandler progressCallBack error occured due to: "+e.getMessage());
             return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Empty headers");
-        }        
+        }
     }
 }

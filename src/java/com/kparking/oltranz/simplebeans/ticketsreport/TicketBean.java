@@ -17,6 +17,7 @@ public class TicketBean {
     private String conductorId;
     private String conductorNames;
     private String nPlate;
+    private String carBrand;
     private String ticketType;
     private String inTime;
     private String outTime;
@@ -24,19 +25,18 @@ public class TicketBean {
     public TicketBean() {
     }
 
-    public TicketBean(String ticketId, String parkingId, String parkingDesc, String conductorId, String conductorNames, String nPlate, String ticketType, String inTime, String outTime) {
+    public TicketBean(String ticketId, String parkingId, String parkingDesc, String conductorId, String conductorNames, String nPlate, String carBrand, String ticketType, String inTime, String outTime) {
         this.ticketId = ticketId;
         this.parkingId = parkingId;
         this.parkingDesc = parkingDesc;
         this.conductorId = conductorId;
         this.conductorNames = conductorNames;
         this.nPlate = nPlate;
+        this.carBrand = carBrand;
         this.ticketType = ticketType;
         this.inTime = inTime;
         this.outTime = outTime;
     }
-
-    
 
     public String getOutTime() {
         return outTime;
@@ -108,6 +108,14 @@ public class TicketBean {
 
     public void setTicketType(String ticketType) {
         this.ticketType = ticketType;
+    }
+
+    public String getCarBrand() {
+        return carBrand;
+    }
+
+    public void setCarBrand(String carBrand) {
+        this.carBrand = carBrand;
     }
     
 }
