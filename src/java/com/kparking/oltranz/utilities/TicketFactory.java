@@ -41,6 +41,7 @@ public class TicketFactory {
                 ticket.getConductorId(),
                 ticket.getConductorName(),
                 ticket.getNumberPlate(),
+                ticket.getTicketType() != null?ticket.getTicketType():"100",
                 ticket.getInDate() != null?ticket.getInDate().toString():"",
                 ticket.getOutDate() != null?ticket.getOutDate().toString():"");
     }
