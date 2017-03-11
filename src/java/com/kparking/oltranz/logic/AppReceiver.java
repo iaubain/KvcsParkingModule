@@ -38,4 +38,7 @@ public class AppReceiver {
     public Response progressCallBack(String sourceIp, int sourcePort, HttpHeaders headers, String body){
         return callBackHandler.progressCallBack(headers);
     }
+    public Response getAllTickets(String sourceIp, int sourcePort, HttpHeaders headers, String body){
+        return appProcessor.getAllTickets();
+    }
 }

@@ -37,6 +37,17 @@ public class TicketFacade extends AbstractFacade<Ticket> {
         em.flush();
     }
     
+    public List<Ticket> getAllTickets(){
+         try{
+            Query q= em.createQuery("Select T from Ticket T ORDER BY T.id DESC");
+            List<Ticket> list = (List<Ticket>)q.getResultList();
+                return list;
+        }catch(Exception ex){
+            ex.printStackTrace(out);
+            return null;
+        }
+    }
+    
     public Ticket getTicketById(String ticketId){
         try{
             if(ticketId.isEmpty())
