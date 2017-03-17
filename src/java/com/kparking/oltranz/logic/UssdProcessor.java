@@ -286,7 +286,6 @@ public class UssdProcessor {
     }
     
     
-    
     public Response receiveCarOut(UssdRequest request){
         try{
             if(request.getNewRequest() == 1){

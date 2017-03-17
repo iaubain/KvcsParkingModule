@@ -206,14 +206,18 @@ public class DataFactory {
         String regexPolice = "^RNP[0-9]{3}[A-Z]$";
         String regexRDF = "^RDF[0-9]{3}[A-Z]$";
         String regexGov = "^GOV[0-9]{3}[A-Z]{2}$";
+        String regexGr = "^GR[0-9]{3}[A-Z]{1}$";
         String regexIT = "^IT[0-9]{3}[A-Z]{2}$";
         String regexRDC = "^CGO[0-9]{4}[A-B]{2}[0-9]{2}$";
+        String regexDRC1 = "^[0-9]{3}[A-Z]{1}[0-9]{3}$";
+        
+        String regexUn = "^UN[0-9]{3}[A-Z]{2}";
         String regexBurundi = "^[A-Z][0-9]{4}$";
         String regexBurundi1 = "^[A-Z][0-9]{4}[A-Z]$";
         String regexUg = "^U[A-Z][0-9]{3}[A-Z]$";
         String regexKenya = "^K[A-Z][A-Z][0-9]{3}[A-Z]$";
         String regexMoto = "^R[A-Z][0-9]{3}[A-Z]$";
-        String totalRegx = regexRwanda+"|"+regexBurundi+"|"+regexUg+"|"+regexRDC+"|"+regexMoto+"|"+regexIT+"|"+regexRDF+"|"+regexGov+"|"+regexKenya+"|"+regexPolice+"|"+regexBurundi1;
+        String totalRegx = regexRwanda+"|"+regexBurundi+"|"+regexUg+"|"+regexRDC+"|"+regexMoto+"|"+regexIT+"|"+regexRDF+"|"+regexGov+"|"+regexKenya+"|"+regexPolice+"|"+regexBurundi1+"|"+regexGr+"|"+regexDRC1+"|"+regexUn;
         out.print(AppDesc.APP_DESC+"DataFactory numberPlateValidator Current Regex: " + totalRegx);
         out.print(AppDesc.APP_DESC+"DataFactory numberPlateValidator Current Input: " + numberPlate);
         // Create a Pattern object
