@@ -26,7 +26,7 @@ public class ApiConfig {
     public static final String TEMPTICKET_CALLBACK_URL = "http://localhost:8080/Kparking/system/tempTicket";
     public static final String TICKET_NOTIFICATION_URL = "http://localhost:8080/Kparking/system/tNotication";
     
-    public static final String GET_USER_BY_TEL = "http://41.74.172.132:8080/KVCSUsersManager/FieldsOpsAgents/fieldAgentByMsisdn/";
+    public static final String GET_USER_BY_TEL = "http://localhost:8080/KVCSUsersManager/FieldsOpsAgents/fieldAgentByMsisdn/";
     public static final String CREATE_USER = "http://localhost:8080/KVCSUsersManager/FieldsOpsAgents/fieldAgentByMsisdn/";
     
     public static final String PUBLISH_TICKET_CMD = "001";
