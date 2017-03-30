@@ -28,9 +28,14 @@ public class OpenExternal {
         try{
             Client client = ClientBuilder.newClient();
             WebTarget target =client.target(url);
-            Response response = target.request()
-                    .headers(headers)
-                    .post(Entity.entity(body, mediaType));
+            Response response;
+            if(headers == null){
+                response = target.request().post(Entity.entity(body, mediaType));
+            }else{
+                response = target.request()
+                        .headers(headers)
+                        .post(Entity.entity(body, mediaType));
+            }
             
             if(response == null){
                 out.print(AppDesc.APP_DESC+"OpenExternal doPost failed to get result: null Response object from: "+url);
@@ -57,18 +62,39 @@ public class OpenExternal {
         }
     }
     
-    public Response goGet(String url, MultivaluedMap<String, Object> headers){
+    public Object goGet(String url, MultivaluedMap<String, Object> headers, String mediaType, Class mappingClass){
         out.print(AppDesc.APP_DESC+" OpenExternal doPost going to get from the External link: "+url);
         try{
             Client client = ClientBuilder.newClient();
             WebTarget target =client.target(url);
-            return target.request()
-                    .headers(headers)
-                    .get();
+            Response response;
+            
+            if(headers == null){
+                response = target.request().get();
+            }else{
+                response = target.request()
+                        .headers(headers)
+                        .get();
+            }
+            
+            int statusCode = response.getStatus();
+            String received = response.readEntity(String.class).trim();
+            out.print(AppDesc.APP_DESC+" received from External link "+url+" HTTP Status: "+statusCode+" and body: "+received);
+            
+            if(statusCode != 200){
+                out.print(AppDesc.APP_DESC+"OpenExternal doPost failed to get result from  "+url+" : HTTP status: "+statusCode+" with message: "+received);
+                return null;
+            }
+            
+            if(mappingClass == null){
+                out.print(AppDesc.APP_DESC+"OpenExternal doPost no mapping class for  "+url+" : HTTP status: "+statusCode+" with message: "+received);
+                return received;
+            }
+            return mapString(received, mappingClass);
         }catch(Exception e){
             out.print(AppDesc.APP_DESC+" OpenExternal doPost Error contacting External due to: "+e.getLocalizedMessage());
             return null;
-        }  
+        }
     }
     
     private Object mapString(String input, Class mappingClass){

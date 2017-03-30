@@ -1,8 +1,8 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+* To change this license header, choose License Headers in Project Properties.
+* To change this template file, choose Tools | Templates
+* and open the template in the editor.
+*/
 package com.kparking.oltranz.config;
 
 /**
@@ -23,4 +23,13 @@ public class ApiConfig {
     
     public static final String CALLBACK_URL = "http://localhost:8080/Kparking/system/schedCallBack";
     public static final String PROGRESS_CALLBACK_URL = "http://localhost:8080/Kparking/system/progressCallBack";
+    public static final String TEMPTICKET_CALLBACK_URL = "http://localhost:8080/Kparking/system/tempTicket";
+    public static final String TICKET_NOTIFICATION_URL = "http://localhost:8080/Kparking/system/tNotication";
+    
+    public static final String GET_USER_BY_TEL = "http://41.74.172.132:8080/KVCSUsersManager/FieldsOpsAgents/fieldAgentByMsisdn/";
+    public static final String CREATE_USER = "http://localhost:8080/KVCSUsersManager/FieldsOpsAgents/fieldAgentByMsisdn/";
+    
+    public static final String PUBLISH_TICKET_CMD = "001";
+    public static final String PUBLISH_TICKET_DOMAIN = "kvcsServices";
+    public static final String PUBLISH_TICKET = "http://localhost:8080/RequestsDispatcher/RequestsHandler";
 }

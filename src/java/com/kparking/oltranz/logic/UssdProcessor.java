@@ -18,9 +18,7 @@ import com.kparking.oltranz.facades.CarFacade;
 import com.kparking.oltranz.facades.ProgressiveFacade;
 import com.kparking.oltranz.facades.TicketFacade;
 import com.kparking.oltranz.simplebeans.commonbeans.ConductorBean;
-import com.kparking.oltranz.simplebeans.commonbeans.ParkingBean;
 import com.kparking.oltranz.simplebeans.conductors.ResponseConductor;
-import com.kparking.oltranz.simplebeans.deployment.ResponseDeployment;
 import com.kparking.oltranz.simplebeans.schedule.JobTasks;
 import com.kparking.oltranz.simplebeans.schedule.MyFrequency;
 import com.kparking.oltranz.simplebeans.schedule.MyJob;
@@ -43,6 +41,16 @@ import java.util.logging.Logger;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.ws.rs.core.Response;
+import net.manzi.frs.config.MenuMessage;
+import net.manzi.frs.config.SessionDataStatus;
+import net.manzi.frs.config.SessionType;
+import net.manzi.frs.config.StepsConfig;
+import net.manzi.frs.databeans.SessionTicketData;
+import net.manzi.frs.databeans.userbeans.UserBean;
+import net.manzi.frs.entities.SessionData;
+import net.manzi.frs.entities.SessionStatus;
+import net.manzi.frs.facades.SessionDataFacade;
+import net.manzi.frs.facades.SessionStatusFacade;
 
 /**
  *
@@ -73,240 +81,108 @@ public class UssdProcessor {
             ProgressiveFacade progressiveFacade;
     @EJB
             OpenExternal openExternal;
-    private String nPlate;
+    @EJB
+            SessionStatusFacade sessionStatusFacade;
+    @EJB
+            SessionDataFacade sessionDataFacade;
+    
     public Response receiveCarInRequest(UssdRequest request){
         try{
+            //check user validity by MSISDN
+            UserBean userBean = getUser(request.getMsisdn());
+            if(!validateEntry(userBean)){
+                out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarInRequest no conductor found for: "+request.getMsisdn());
+                SessionStatus sessionStatus = sessionStatusFacade.getClientLastSession(request.getMsisdn());
+                if(sessionStatus != null){
+                    sessionStatus.setCompleted(true);
+                    sessionStatus.setLastAccessDate(new Date());
+                    sessionStatus.setLastAction("USER NOT ALLOWED");
+                    sessionStatus.setSessionStatus(SessionDataStatus.CANCELLED_STATUS);
+                    sessionStatusFacade.edit(sessionStatus);
+                    sessionStatusFacade.refreshSessionStatus();
+                }
+                return ReturnConfig.isSuccess(faillureGen(request, "Ntago mwemerewe gukoresha iyi service. Kubindi bisobanuro mwahamagara 799.^Mwongere mukanya."));
+            }
             
+            String conductorNames = userBean.getfName() != null ? userBean.getfName() : "" +userBean.getOtherNames() != null ? userBean.getOtherNames() : "";
+            String msisdn = request.getMsisdn();
+            
+            if(userBean.getRoleId() != 4){
+                out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarInRequest no conductor found for: "+request.getMsisdn());
+                return ReturnConfig.isSuccess(faillureGen(request, "Ntago mwemerewe gukoresha iyi service. Kubindi bisobanuro mwahamagara 799.^Mwongere mukanya."));
+            }
+            
+            SessionStatus sessionStatus = sessionStatusFacade.getClientLastSession(msisdn);
             if(request.getNewRequest() == 1){
-                //check the session for possible list of parking in there
-                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a non new request received from"+request.getMsisdn());
-                ResponseConductor responseConductor = getConductor(request.getMsisdn());
-                if(!validateEntry(responseConductor)){
-                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest no conductor found for: "+request.getMsisdn());
-                    return ReturnConfig.isSuccess(faillureGen(request, "Ibyo mushaka ntibibashije kuboneka.^Mwongere mukanya."));
+                if(sessionStatus == null){
+                    //create new session
+                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarInRequest generate new session for: "+msisdn+" Names: "+conductorNames);
+                    sessionStatus = createSession(request, SessionType.CAR_IN, StepsConfig.ENTER_NUMBER_PLATE);
+                }else{
+                    if(!sessionStatus.isCompleted() && sessionStatus.getSessionStatus().equals(SessionDataStatus.ONGOING_STATUS)){
+                        //resume the session
+                        out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarInRequest resuming session: "+sessionStatus.getSessionId()+" for: "+msisdn+" Names: "+conductorNames);
+                        sessionStatus.setSessionStatus(SessionDataStatus.RESUME_STATUS);
+                        sessionStatus.setLastAccessDate(new Date());
+                        sessionStatus.setLastAction("RECOVER FROM UNCOMPLETED SESSION");
+                        updateSession(sessionStatus);
+                        return ReturnConfig.isSuccess(continueInput(conductorNames+MenuMessage.RESUME_MENU, request));
+                    }else{
+                        //Last session completed and create new session
+                        out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarInRequest last session: "+sessionStatus.getSessionId()+" completed generating nee session for: "+msisdn+" Names: "+conductorNames);
+                        sessionStatus = createSession(request, SessionType.CAR_IN, StepsConfig.ENTER_NUMBER_PLATE);
+                    }
                 }
-                Progressive progressive = progressiveFacade.getConductorLastUnfinishedProgressive(request.getMsisdn(), false);
-                if(progressive != null){
-                    ConductorBean conductorBean = responseConductor.getConductor();
-                    String conductorNames = conductorBean.getFirstName() != null?conductorBean.getFirstName():"" +conductorBean.getMiddleName()!= null?conductorBean.getMiddleName():"" + conductorBean.getLastName()!= null?conductorBean.getLastName():"";
-                    
-                    return ReturnConfig.isSuccess(continueInput(conductorNames+"^Andika neza ubwoko bwatike.^Imodoka: "+progressive.getNumberPlate()+"^1. 100Rwf^2. 200Rwf^3. 400Rwf^4. 1000Rwf",request));
-                }
-                
-                return ReturnConfig.isSuccess(carInOutMenu("Guparika^",request));
             }
-            
-            request.setInput(request.getInput().replace(" ", "").toUpperCase());
-            ResponseConductor responseConductor = getConductor(request.getMsisdn());
-            if(!validateEntry(responseConductor)){
-                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest no conductor found for: "+request.getMsisdn());
-                return ReturnConfig.isSuccess(faillureGen(request, "Ibyo mushaka ntibibashije kuboneka.^Mwongere mukanya."));
-            }
-            ConductorBean conductorBean = responseConductor.getConductor();
-            String conductorNames = conductorBean.getFirstName() != null?conductorBean.getFirstName():"" +conductorBean.getMiddleName()!= null?conductorBean.getMiddleName():"" + conductorBean.getLastName()!= null?conductorBean.getLastName():"";
-            
-            Progressive progressive = progressiveFacade.getConductorLastUnfinishedProgressive(request.getMsisdn(), false);
-            if(progressive != null){
-                this.nPlate = progressive.getNumberPlate();
-                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest progressive found for: "+request.getMsisdn());
-                switch(request.getInput()){
-                    case "1":
-                        progressive.setTicketType("100");
-                        break;
-                    case "2":
-                        progressive.setTicketType("200");
-                        break;
-                    case "3":
-                        progressive.setTicketType("400");
-                        break;
-                    case "4":
-                        progressive.setTicketType("1000");
-                        break;
+            if(sessionStatus.getSessionType().equals(SessionType.CAR_IN)){
+                out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarInRequest processing"+msisdn+" Names: "+conductorNames+" Session type: "+SessionType.CAR_IN);
+                switch(sessionStatus.getSessionStatus()){
+                    case SessionDataStatus.RESUME_STATUS:
+                        out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarInRequest resuming "+msisdn+" Names: "+conductorNames+" Session type: "+SessionType.CAR_IN);
+                        SessionStatus resumeSession = resumeProcessor(request, sessionStatus);
+                        if(resumeSession == null){
+                            out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarInRequest resuming "+msisdn+" Names: "+conductorNames+" Session type: "+SessionType.CAR_IN+" Invalid resume entry.");
+                            return ReturnConfig.isSuccess(continueInput(conductorNames+"^Mwashyizemo ibitaribyo"+MenuMessage.RESUME_MENU, request));
+                        }
+                        return processEntry(resumeSession, userBean, request, conductorNames, true);
+                    case SessionDataStatus.ONGOING_STATUS:
+                        return processEntry(sessionStatus, userBean, request, conductorNames, false);
                     default:
-                        return ReturnConfig.isSuccess(continueInput(conductorNames+"^Andika neza ubwoko bwatike.^Imodoka: "+progressive.getNumberPlate()+"^1. 100Rwf^2. 200Rwf^3. 400Rwf^4. 1000Rwf",request));
+                        out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarInRequest resuming "+msisdn+" Names: "+conductorNames+" Session type: Missing session Type");
+                        return ReturnConfig.isSuccess(faillureGen(request,"KVCS PARKING SYSTEM^Ibyo mushaka ntibibonetse.^Mwongere mukanya."));
                 }
             }else{
-                Date date = new Date();
-                Ticket ticket = ticketFacade.getConductorLastTicket(request.getMsisdn());
-                if(ticket == null){
-                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest ticket not available: "+request.getMsisdn() +" of: "+conductorBean.getFirstName());
-                    return ReturnConfig.isSuccess(faillureGen(request, "Ikaze, "+conductorNames+"^Ibyomushaka ntibishobotse."));
-                }
-                progressive = progressiveFacade.getCustomerLastProgressive(request.getMsisdn(), ticket.getNumberPlate());
-                if(progressive != null){
-                    if((ticket.getCarBrand().isEmpty() || ticket.getCarBrand().equals("")) && progressive.isIsFinished()){
-                        ticket.setCarBrand(request.getInput());
-                        ticketFacade.edit(ticket);
-                        ticketFacade.refreshTicket();
-                        out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest Succeeded to set a brand to ticket for: "+ticket.getNumberPlate());
-                        return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Imodoka. "+ticket.getNumberPlate()+"^Ubwoko: "+request.getInput()+"^Iparitse: "+ticket.getParkingDesc()));
-                    }
-                    
-//                    else{
-//                        out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest failed to set car brand ticket for: "+ticket.getNumberPlate());
-//                        return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Imodoka. "+ticket.getNumberPlate()+"^Ubwoko: "+request.getInput()+"^Iparitse: "+ticket.getParkingDesc()+"^Ibyo mwanditse ntibishyizwemo."));
-//                    }
-
-
-//                    if(! DataFactory.numberPlateValidator(request.getInput())){
-//                        if(progressive.isIsFinished()){
-//                            out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput()+" and this is a brand.");
-//                            if(ticket.getCarBrand().isEmpty() || ticket.getCarBrand().equals("")){
-//                                ticket.setCarBrand(request.getInput());
-//                                ticketFacade.edit(ticket);
-//                                ticketFacade.refreshTicket();
-//                            }
-//                            out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest Succeeded to set a brand to ticket for: "+ticket.getNumberPlate());
-//                            return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Imodoka. "+ticket.getNumberPlate()+"^Ubwoko: "+request.getInput()+"^Iparitse: "+ticket.getParkingDesc()));
-//                        }
-//                    }else{
-//                        out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest Succeeded to generate ticket for: "+ticket.getNumberPlate());
-//                        return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Imodoka. "+ticket.getNumberPlate()+"^Ubwoko: "+request.getInput()+"^Iparitse: "+ticket.getParkingDesc()));
-//                    }
-                }
-                if(! DataFactory.numberPlateValidator(request.getInput())){
-                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
-                    return ReturnConfig.isSuccess(faillureGen(request, "Ikaze, "+conductorNames+"^Plaque: "+request.getInput()+" Reba niba yanditse neza."));
-                }
-                
-                this.nPlate = request.getInput();
-                
-                progressive = new Progressive(idGenerator(),
-                        request.getMsisdn(),
-                        request.getInput(),
-                        "0",
-                        date,
-                        date,
-                        false);
-                progressiveFacade.create(progressive);
-                progressiveFacade.refreshProgressive();
-                //Get the current date
-                DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");
-                Timestamp timestamp = new Timestamp(new Date().getTime());
-                Calendar calendar = Calendar.getInstance();
-                
-                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest Schedule for progressive initiator: "+progressive.getInitMsisdn()+", number plate"+progressive.getNumberPlate()+" and ID: "+progressive.getId()+" . Trigered: "+timestamp);
-                
-                //add 3 minutes to the current date
-                calendar.setTimeInMillis(timestamp.getTime());
-                calendar.add(Calendar.MINUTE, 21);
-                timestamp = new Timestamp(calendar.getTime().getTime());
-                
-                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest Schedule for progressive initiator: "+progressive.getInitMsisdn()+", number plate"+progressive.getNumberPlate()+" and ID: "+progressive.getId()+" will expire on: "+timestamp);
-                MyFrequency myFrequency = new MyFrequency("minute", "180000");
-                List<JobTasks> mTasks = new ArrayList<>();
-                JobTasks jobTasks = new JobTasks(progressive.getProgressId(),
-                        getClass().getName(),
-                        myFrequency,
-                        ApiConfig.PROGRESS_CALLBACK_URL,
-                        1);
-                mTasks.add(jobTasks);
-                
-                MyJob mJob = new MyJob(progressive.getProgressId(),
-                        "daily",
-                        getClass().getName(),
-                        ApiConfig.PROGRESS_CALLBACK_URL,
-                        dateFormat.format(timestamp),
-                        true,
-                        myFrequency,
-                        mTasks);
-                createSchedule(mJob);
-                
-                return ReturnConfig.isSuccess(continueInput(conductorNames+"^Andika ubwoko bwatike.^Imodoka: "+request.getInput()+"^1. 100Rwf^2. 200Rwf^3. 400Rwf^4. 1000Rwf",request));
+                out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarInRequest action failed due to: Bad redirection from USSD agregator.");
+                return ReturnConfig.isSuccess(faillureGen(request,"KVCS PARKING SYSTEM^Ibyo mushaka ntibibonetse.^Mwongere mukanya."));
             }
-            
-            Thread.sleep(10);
-            
-            List<ResponseDeployment> mDeploymetList =(List<ResponseDeployment>)(Object)DataFactory.stringToObjectList(ResponseDeployment.class, apInterface.getConductorDep(responseConductor.getConductor().getConductorId()));
-            if(mDeploymetList == null){
-                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest no available parking found for: "+request.getMsisdn() +" of: "+conductorBean.getFirstName());
-                return ReturnConfig.isSuccess(faillureGen(request, "Ikaze, "+conductorNames+"^Nta parikingi mwashyizwemo."));
-            }
-            ResponseDeployment mDeployment = mDeploymetList.get(0);
-            ParkingBean parkingBean = mDeployment.getParking();
-            if(parkingBean == null){
-                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest no available parking found for: "+request.getMsisdn() +" of: "+conductorBean.getFirstName());
-                return ReturnConfig.isSuccess(faillureGen(request, "Ikaze, "+conductorNames+"^Nta parikingi mwashyizwemo."));
-            }
-            
-            //            List<Ticket> todayTickets = ticketFacade.getTicketsByNumberPlate(request.getInput());
-            //            if(todayTickets != null)
-            //                for(Ticket ticket : todayTickets){
-            //                    if(ticket.getOutDate() == null){
-            //                        out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+ticket.getNumberPlate()+" already parked in: "+ticket.getParkingDesc()+" by conductor: "+ticket.getConductorName()+" and Id: "+ticket.getConductorId());
-            //                        return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^ Iyi Imodoka. "+ticket.getNumberPlate()+" iragaragara nk'igiparitse ^ Parikingi: "+ticket.getParkingDesc()+"^Yashyizwemo na: "+ticket.getConductorName()));
-            //                    }
-            //                }
-            
-            Ticket checkLastTicket = ticketFacade.getCustormerLastTicket(nPlate);
-            
-            if(checkLastTicket != null){
-                if(checkLastTicket.getOutDate() != null){
-                    DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");
-                    out.print(AppDesc.APP_DESC+" UssdProcessor genNewTicket last ticket: "+checkLastTicket.getTicketId()+" startDate: "+dateFormat.parse(dateFormat.format(checkLastTicket.getInDate())));
-                    Date startDate = dateFormat.parse(dateFormat.format(checkLastTicket.getInDate()));
-                    
-                    Date date = new Date();
-                    
-                    Date endDate = dateFormat.parse(dateFormat.format(new Date()));
-                    out.print(AppDesc.APP_DESC+" UssdProcessor genNewTicket ticket endDate: "+endDate);
-                    
-                    long durationMinutes = DataFactory.printDifference(startDate, endDate);
-                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+" elapsed minutes from last ticket: "+durationMinutes+" minutes.");
-                    if(checkLastTicket.getInDate().compareTo(date) < 0)
-                        if(durationMinutes > 0 && durationMinutes < 60){
-                            
-                            progressive.setIsFinished(true);
-                            progressiveFacade.edit(progressive);
-                            
-                            out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+" has remained time before an hour get elapsed: "+durationMinutes+" minutes");
-                            return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^ Iyi Imodoka. "+checkLastTicket.getNumberPlate()+" iracyafite iminota "+(60-durationMinutes)+" kugirango isaha ishire.^ Yinjiriye muri Parikingi: "+checkLastTicket.getParkingDesc()+"^Yashyizwemo na: "+checkLastTicket.getConductorName()));
-                        }
-                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" was parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId()+"  elapsed minutes from last ticket: "+durationMinutes+" minutes");
-                    
-                }else{
-                    progressive.setIsFinished(true);
-                    progressiveFacade.edit(progressive);
-                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+checkLastTicket.getNumberPlate()+" already parked in: "+checkLastTicket.getParkingDesc()+" by conductor: "+checkLastTicket.getConductorName()+" and Id: "+checkLastTicket.getConductorId());
-                    return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^ Iyi Imodoka. "+checkLastTicket.getNumberPlate()+" iragaragara nk'igiparitse ^ Parikingi: "+checkLastTicket.getParkingDesc()+"^Yashyizwemo na: "+checkLastTicket.getConductorName()));
-                }
-            }
-            if(!ticketManager.genNewTicket(responseConductor.getConductor(), parkingBean, request.getMsisdn())){
-                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest failed to generate ticket for: "+request.getInput());
-                return ReturnConfig.isSuccess(faillureGen(request, conductorNames+" Ibyo mushaka ntibibonetse.^Mwongere mukanya."));
-            }
-            
-            out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest Succeeded to generate ticket for: "+nPlate);
-            return ReturnConfig.isSuccess(continueInput(conductorNames+" ^Imodoka. "+nPlate+"^Ishyizwe muri parikingi.^Andika ubwoko", request));
-            
         }catch(Exception e){
-            out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest action failed due to: "+e.getMessage());
+            out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarInRequest action failed due to: "+e.getMessage());
             return ReturnConfig.isSuccess(faillureGen(request,"KVCS PARKING SYSTEM^Ibyo mushaka ntibibonetse.^Mwongere mukanya."));
         }
     }
     
-    
     public Response receiveCarOut(UssdRequest request){
         try{
+            //check user validity by MSISDN
+            UserBean userBean = getUser(request.getMsisdn());
+            if(!validateEntry(userBean)){
+                out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarInRequest no conductor found for: "+request.getMsisdn());
+                return ReturnConfig.isSuccess(faillureGen(request, "Ntago mwemerewe gkoresha iyi service. Kubindi bisobanuro mwahamagara 799.^Mwongere mukanya."));
+            }
+            
+            String conductorNames = userBean.getfName() != null ? userBean.getfName() : "" +userBean.getOtherNames() != null ? userBean.getOtherNames() : "";
+            //String msisdn = request.getMsisdn();
+            
+            if(userBean.getRoleId() != 4){
+                out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarInRequest no conductor found for: "+request.getMsisdn());
+                return ReturnConfig.isSuccess(faillureGen(request, "Ntago mwemerewe gukoresha iyi service. Kubindi bisobanuro mwahamagara 799.^Mwongere mukanya."));
+            }
+            
             if(request.getNewRequest() == 1){
                 //check the session for possible list of parking in there
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarOut a new request received from"+request.getMsisdn());
-                ResponseConductor responseConductor = getConductor(request.getMsisdn());
-                if(!validateEntry(responseConductor)){
-                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest no conductor found for: "+request.getMsisdn());
-                    return ReturnConfig.isSuccess(faillureGen(request, "Ibyo mushaka ntibibashije kuboneka.^Mwongere mukanya."));
-                }
                 return ReturnConfig.isSuccess(carInOutMenu("Kuvana imodoka muri parikingi^",request));
             }
-            
-            ResponseConductor responseConductor = getConductor(request.getMsisdn());
-            if(!validateEntry(responseConductor)){
-                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest no conductor found for: "+request.getMsisdn());
-                return ReturnConfig.isSuccess(faillureGen(request, "Ibyo mushaka ntibibashije kuboneka.^Mwongere mukanya."));
-            }
-            
-            ConductorBean conductorBean = responseConductor.getConductor();
-            String conductorNames = conductorBean.getFirstName() != null?conductorBean.getFirstName():"" +conductorBean.getMiddleName()!= null?conductorBean.getMiddleName():"" + conductorBean.getLastName()!= null?conductorBean.getLastName():"";
             
             request.setInput(request.getInput().replace(" ", "").toUpperCase());
             if(! DataFactory.numberPlateValidator(request.getInput())){
@@ -319,11 +195,11 @@ public class UssdProcessor {
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+request.getInput()+" with no ticket: by conductor: "+request.getMsisdn());
                 return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Imodoka. "+request.getInput()+"^Ntago ibonetse."));
             }
-            if(ticket.getOutDate() != null){
+            if(ticket.getTicketStatus().equals(SessionDataStatus.COMPLETED_STATUS)){
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+request.getInput()+" with ticket: "+ticket.getTicketId()+" by conductor: "+request.getMsisdn());
                 return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Imodoka. "+request.getInput()+"^Yamaze gukurwa muri parikingi.^Isaha yakuwemo: "+ticket.getOutDate()));
             }
-            if(!ticket.getConductorId().equals(conductorBean.getConductorId())){
+            if(!ticket.getConductorId().equals(userBean.getUserId())){
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+request.getInput()+" with ticket: "+ticket.getTicketId()+" request by conductor: "+request.getMsisdn()+" Initiated by: "+ticket.getConductorId());
                 return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Imodoka. "+request.getInput()+"^Yashyizwe muri parking na: "+ticket.getConductorName()+"^Saa: "+ticket.getOutDate()+"^Kuri: "+ticket.getParkingDesc()));
             }
@@ -345,7 +221,7 @@ public class UssdProcessor {
                 //check the session for possible list of parking in there
                 out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a new request received from"+request.getMsisdn());
                 
-                return ReturnConfig.isSuccess(carInOutMenu("Kureba Imodoka.^Check car.^Vérifier l'auto.^Shyiramo puraki, Fill number plate, Entre la plaque.",request));
+                return ReturnConfig.isSuccess(carInOutMenu("Kureba Imodoka.",request));
             }
             
             request.setInput(request.getInput().replace(" ", "").toUpperCase());
@@ -356,7 +232,7 @@ public class UssdProcessor {
             Ticket ticket = ticketFacade.getCustormerLastTicket(request.getInput());
             if(ticket == null){
                 out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a car with "+request.getInput()+" with no ticket: by conductor: "+request.getMsisdn());
-                return ReturnConfig.isSuccess(faillureGen(request, request.getInput()+"^Ntibonetse, Not available, N'est pas trouvé"));
+                return ReturnConfig.isSuccess(faillureGen(request, request.getInput()+"^Ntirikugaragara muri parikingi"));
             }
             
             String message;
@@ -368,12 +244,12 @@ public class UssdProcessor {
                 out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a car with "+request.getInput()+" last date: "+lastTime+" Requestor: "+request.getMsisdn());
                 
             }
-            lastTime = lastTime != null?lastTime:"time not available";
-            if(ticket.getOutDate() == null){
-                message = ticket.getNumberPlate()+" Iri muri parikingi, Is parked, est garé^"+ticket.getParkingDesc()+" / Yagiyemo, In time, Entre "+lastTime;
+            lastTime = lastTime != null?lastTime:"^igihe : ntikibonetse";
+            if(ticket.getTicketStatus().equals(SessionDataStatus.ONGOING_STATUS)){
+                message = "Imodoka:"+ticket.getNumberPlate()+"^Iparitse:"+ticket.getParkingDesc()+"^Yagiyemo"+lastTime+"^Yashyizwemo:"+ticket.getConductorName();
                 out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a car with "+request.getInput()+" last date: "+lastTime != null?lastTime:""+" Requestor: "+request.getMsisdn()+" message: "+message);
             }else{
-                message = ticket.getNumberPlate()+" Bwanyuma yari, Lastly seen, Dernierement vu^"+ticket.getParkingDesc()+" / "+lastTime;
+                message = "Imodoka:"+ticket.getNumberPlate()+"^Yavuye muri parikingi:"+ticket.getParkingDesc()+"^Yagiyemo:"+lastTime+"^Yashyizwemo:"+ticket.getConductorName();
                 out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a car with "+request.getInput()+" last date: "+lastTime+" Requestor: "+request.getMsisdn()+" message: "+message);
             }
             
@@ -395,7 +271,10 @@ public class UssdProcessor {
             }
             ResponseConductor responseConductor = getConductor(request.getMsisdn());
             Car car;
-            if(!validateEntry(responseConductor)){
+            //check user validity by MSISDN
+            UserBean userBean = getUser(request.getMsisdn());
+            
+            if(!validateEntry(userBean)){
                 out.print(AppDesc.APP_DESC+"UssdProcessor signupCar no conductor found for: "+request.getMsisdn());
                 request.setInput(request.getInput().replace(" ", "").toUpperCase());
                 if(! DataFactory.numberPlateValidator(request.getInput())){
@@ -411,9 +290,9 @@ public class UssdProcessor {
             String conductorNames = conductorBean.getFirstName() != null?conductorBean.getFirstName():"" +conductorBean.getMiddleName()!= null?conductorBean.getMiddleName():"" + conductorBean.getLastName()!= null?conductorBean.getLastName():"";
             
             String[] data = DataFactory.splitString(request.getInput(), " ");
-            String nPlate = data[0].toUpperCase();
+            String numberPlate = data[0].toUpperCase();
             String tel = data[1];
-            if(! DataFactory.numberPlateValidator(nPlate)){
+            if(! DataFactory.numberPlateValidator(numberPlate)){
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
                 return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza, Typo Error."));
             }
@@ -424,7 +303,7 @@ public class UssdProcessor {
                 return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Reba niba"+tempTel != null? tempTel:""+" numero yumukiriya wayanditse neza."));
                 
             }
-            car = new Car(nPlate,
+            car = new Car(numberPlate,
                     tel,
                     "Conductor:ID"+responseConductor.getConductor().getConductorId()+" Names:"+conductorNames,
                     new Date());
@@ -439,23 +318,266 @@ public class UssdProcessor {
         }
     }
     
-    private boolean validateEntry(ResponseConductor responseConductor){
-        if(responseConductor == null){
-            out.print(AppDesc.APP_DESC+"UssdProcessor validateEntry no conductor found.");
-            return false;
+    private SessionStatus resumeProcessor(UssdRequest request, SessionStatus sessionStatus){
+        out.print(AppDesc.APP_DESC+"UssdProcessor resumeProcessor resuming "+request.getMsisdn()+" SessionType: "+sessionStatus.getSessionType()+" SessionId: "+sessionStatus.getSessionId());
+        switch(request.getInput()){
+            case "1":
+                out.print(AppDesc.APP_DESC+"UssdProcessor resumeProcessor resume Input: 1 for: "+request.getMsisdn());
+                sessionStatus.setSessionStatus(SessionDataStatus.ONGOING_STATUS);
+                sessionStatus.setCompleted(false);
+                sessionStatus.setLastAccessDate(new Date());
+                sessionStatus.setLastAction("RECOVER SESSION TO ON GOING");
+                sessionStatusFacade.edit(sessionStatus);
+                sessionStatusFacade.refreshSessionStatus();
+                return sessionStatus;
+            case "2":
+                out.print(AppDesc.APP_DESC+"UssdProcessor resumeProcessor resume Input: 2 for: "+request.getMsisdn());
+                sessionStatus.setSessionStatus(SessionDataStatus.CANCELLED_STATUS);
+                sessionStatus.setCompleted(true);
+                sessionStatus.setLastAccessDate(new Date());
+                sessionStatus.setLastAction("CANCELLING SESSION");
+                sessionStatusFacade.edit(sessionStatus);
+                sessionStatusFacade.refreshSessionStatus();
+                
+                return createSession(request, SessionType.CAR_IN, StepsConfig.ENTER_NUMBER_PLATE);
+            default:
+                out.print(AppDesc.APP_DESC+"UssdProcessor resumeProcessor failed due to resume Input: "+request.getInput()+" for: "+request.getMsisdn());
+                return null;
+        }
+    }
+    
+    private Response processEntry(SessionStatus sessionStatus, UserBean userBean, UssdRequest request, String conductorNames, boolean isResume){
+        Date date = new Date();
+        if(isResume){
+            switch(sessionStatus.getStepsCount()){
+                case 1:
+                    return ReturnConfig.isSuccess(carInOutMenu("Guparika^"+conductorNames+" ",request));
+                case 2:
+                    List<SessionData> sDatas = sessionDataFacade.getSessionData(sessionStatus.getSessionId());
+                    if(sDatas == null){
+                        sessionStatus.setCompleted(true);
+                        sessionStatus.setLastAccessDate(date);
+                        sessionStatus.setLastAction("CANCELLING SESSION DUE TO MISSING SESSION DATA");
+                        sessionStatus.setSessionType(SessionDataStatus.CANCELLED_STATUS);
+                        updateSession(sessionStatus);
+                        return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Ibyo mushaka ntibibonetse.^Mwongere mukanya."));
+                    }
+                    String numberPlate = null;
+                    for(SessionData sData : sDatas){
+                        if(sData.getSessionkey().equals(StepsConfig.ENTER_NUMBER_PLATE)){
+                            numberPlate = sData.getSessionInput();
+                            break;
+                        }
+                    }
+                    numberPlate = numberPlate == null ? "purake" : numberPlate;
+                    return ReturnConfig.isSuccess(continueInput(conductorNames+"^Hitamo ubwoko bwatike.^Imodoka: "+numberPlate+"^1. 100Rwf^2. 200Rwf^3. 400Rwf^4. 1000Rwf",request));
+                case 3:
+                    sDatas = sessionDataFacade.getSessionData(sessionStatus.getSessionId());
+                    if(sDatas == null){
+                        sessionStatus.setCompleted(true);
+                        sessionStatus.setLastAccessDate(date);
+                        sessionStatus.setLastAction("CANCELLING SESSION DUE TO MISSING SESSION DATA");
+                        sessionStatus.setSessionStatus(SessionDataStatus.CANCELLED_STATUS);
+                        updateSession(sessionStatus);
+                        return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Ibyo mushaka ntibibonetse.^Mwongere mukanya."));
+                    }
+                    numberPlate = null;
+                    for(SessionData sData : sDatas){
+                        if(sData.getSessionkey().equals(StepsConfig.ENTER_NUMBER_PLATE)){
+                            numberPlate = sData.getSessionInput();
+                            break;
+                        }
+                    }
+                    numberPlate = numberPlate == null ? "purake" : numberPlate;
+                    return ReturnConfig.isSuccess(continueInput(conductorNames+"^Andika ubwoko bw'imodoka^Ifite: "+ numberPlate ,request));
+            }
         }
         
-        if(responseConductor.getConductor() == null){
-            out.print(AppDesc.APP_DESC+"UssdProcessor validateEntry no conductor found.");
+        out.print(AppDesc.APP_DESC+"UssdProcessor processEntry process "+request.getMsisdn()+" SessionType: "+sessionStatus.getSessionType()+" SessionId: "+sessionStatus.getSessionId());
+        if(sessionStatus.getSessionType().equals(SessionType.CAR_IN)){
+            if(sessionStatus.getCurrentStep().equals(StepsConfig.WLCM) && sessionStatus.getStepsCount() == 0 && sessionStatus.getNextStep().equals(StepsConfig.ENTER_NUMBER_PLATE)){
+                out.print(AppDesc.APP_DESC+"UssdProcessor processEntry requestor "+request.getMsisdn()+" Session count: "+sessionStatus.getStepsCount()+" Current Step: "+sessionStatus.getCurrentStep()+" Next Step: "+sessionStatus.getNextStep());
+                sessionStatus.setStepsCount(1);
+                sessionStatus.setLastAccessDate(date);
+                sessionStatus.setLastAction("REQUESTING NUMBER PLATE CAPTURE");
+                updateSession(sessionStatus);
+                return ReturnConfig.isSuccess(carInOutMenu("Guparika^"+conductorNames,request));
+            }else if(sessionStatus.getCurrentStep().equals(StepsConfig.WLCM) && sessionStatus.getStepsCount() == 1 && sessionStatus.getNextStep().equals(StepsConfig.ENTER_NUMBER_PLATE)){
+                out.print(AppDesc.APP_DESC+"UssdProcessor processEntry requestor "+request.getMsisdn()+" Session count: "+sessionStatus.getStepsCount()+" Current Step: "+sessionStatus.getCurrentStep()+" Next Step: "+sessionStatus.getNextStep());
+                
+                request.setInput(request.getInput().replace(" ", "").toUpperCase());
+                if(! DataFactory.numberPlateValidator(request.getInput())){
+                    return ReturnConfig.isSuccess(carInOutMenu("Guparika^"+conductorNames+"^Plaque "+request.getInput()+" Ntiyemewe^",request));
+                }
+                SessionData sessionData = new SessionData(sessionStatus.getSessionId(),
+                        StepsConfig.ENTER_NUMBER_PLATE,
+                        request.getInput(),
+                        new Date());
+                createSessionData(sessionData);
+                
+                sessionStatus.setCurrentStep(StepsConfig.ENTER_NUMBER_PLATE);
+                sessionStatus.setNextStep(StepsConfig.ENTER_TICKET_TYPE);
+                sessionStatus.setCurrentInput(request.getInput());
+                sessionStatus.setLastAccessDate(date);
+                sessionStatus.setLastAction("REQUESTING TICKET TYPE CAPTURE");
+                sessionStatus.setStepsCount(2);
+                updateSession(sessionStatus);
+                
+                reminder(sessionStatus);
+                return ReturnConfig.isSuccess(continueInput(conductorNames+"^Hitamo ubwoko bwatike.^Imodoka: "+request.getInput()+"^1. 100Rwf^2. 200Rwf^3. 400Rwf^4. 1000Rwf",request));
+            }else if(sessionStatus.getCurrentStep().equals(StepsConfig.ENTER_NUMBER_PLATE) && sessionStatus.getStepsCount() == 2 && sessionStatus.getNextStep().equals(StepsConfig.ENTER_TICKET_TYPE)){
+                out.print(AppDesc.APP_DESC+"UssdProcessor processEntry requestor "+request.getMsisdn()+" Session count: "+sessionStatus.getStepsCount()+" Current Step: "+sessionStatus.getCurrentStep()+" Next Step: "+sessionStatus.getNextStep());
+                if(!request.getInput().equals("1") && !request.getInput().equals("2") && !request.getInput().equals("3") && !request.getInput().equals("3") && !request.getInput().equals("4")){
+                    return ReturnConfig.isSuccess(continueInput(conductorNames+"^Mwahisemo ibitaribyo^Hitamo ubwoko bwatike.^Imodoka: "+sessionStatus.getCurrentInput()+"^1. 100Rwf^2. 200Rwf^3. 400Rwf^4. 1000Rwf",request));
+                }
+                SessionData sessionData = new SessionData(sessionStatus.getSessionId(),
+                        StepsConfig.ENTER_TICKET_TYPE,
+                        request.getInput(),
+                        new Date());
+                createSessionData(sessionData);
+                
+                sessionData = sessionDataFacade.getBeforeLastSessionData(sessionStatus.getSessionId());
+                String numberPlate = null;
+                if(sessionData != null){
+                    if(sessionData.getSessionkey().equals(StepsConfig.ENTER_NUMBER_PLATE))
+                        numberPlate = sessionData.getSessionInput();
+                }
+                
+                sessionStatus.setCurrentStep(StepsConfig.ENTER_TICKET_TYPE);
+                sessionStatus.setNextStep(StepsConfig.ENTER_CAR_BRAND);
+                sessionStatus.setCurrentInput(request.getInput());
+                sessionStatus.setLastAccessDate(date);
+                sessionStatus.setLastAction("REQUESTING CAR BRAND CAPTURE");
+                sessionStatus.setStepsCount(3);
+                updateSession(sessionStatus);
+                numberPlate = numberPlate == null ? "purake" : numberPlate;
+                SessionTicketData sessionTicketData = new SessionTicketData();
+                sessionTicketData.setSessionId(sessionStatus.getSessionId());
+                List<SessionData> sessionDatas = sessionDataFacade.getSessionData(sessionStatus.getSessionId());
+                if(sessionDatas != null){
+                    for(SessionData sData : sessionDatas){
+                        switch (sData.getSessionkey()) {
+                            case StepsConfig.ENTER_CAR_BRAND:
+                                sessionTicketData.setCarBrand(sData.getSessionInput());
+                                break;
+                            case StepsConfig.ENTER_TICKET_TYPE:
+                                sessionTicketData.setTicketType(sData.getSessionInput());
+                                break;
+                            case StepsConfig.ENTER_NUMBER_PLATE:
+                                sessionTicketData.setnPlate(sData.getSessionInput());
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
+                if(sessionTicketData.getnPlate().isEmpty()){
+                    return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Hari ikibazo cyabaye mukwandika purake y'imodoka.^Mwongere mukanya."));
+                }
+                String result = ticketManager.genTicket(sessionStatus, userBean, sessionTicketData);
+                if(!result.equals("SUCCESS")){
+                    out.print(AppDesc.APP_DESC+" UssdProcessor processEntry failed to generate ticket result: "+result);
+                    return ReturnConfig.isSuccess(successGen(request, conductorNames+"^Habaye ikibazo mugukora agatike^Mwongere mukanya"));
+                }
+                return ReturnConfig.isSuccess(continueInput(conductorNames+"^Andika ubwoko bw'imodoka^Ifite: "+ numberPlate ,request));
+            }else if(sessionStatus.getCurrentStep().equals(StepsConfig.ENTER_TICKET_TYPE) && sessionStatus.getStepsCount() == 3 && sessionStatus.getNextStep().equals(StepsConfig.ENTER_CAR_BRAND)){
+                out.print(AppDesc.APP_DESC+"UssdProcessor processEntry requestor "+request.getMsisdn()+" Session count: "+sessionStatus.getStepsCount()+" Current Step: "+sessionStatus.getCurrentStep()+" Next Step: "+sessionStatus.getNextStep());
+                SessionData sessionData = new SessionData(sessionStatus.getSessionId(),
+                        StepsConfig.ENTER_CAR_BRAND,
+                        request.getInput(),
+                        new Date());
+                createSessionData(sessionData);
+                
+                sessionStatus.setCurrentStep(StepsConfig.ENTER_CAR_BRAND);
+                sessionStatus.setNextStep(StepsConfig.ENTER_CAR_BRAND);
+                sessionStatus.setCurrentInput(request.getInput());
+                sessionStatus.setLastAccessDate(date);
+                sessionStatus.setCompleted(true);
+                sessionStatus.setLastAction("CAR TICKET CONCLUDED");
+                sessionStatus.setSessionStatus(SessionDataStatus.COMPLETED_STATUS);
+                sessionStatus.setStepsCount(4);
+                updateSession(sessionStatus);
+                ticketManager.setCarBrandOnTicket(sessionStatus, request.getInput());
+                
+                SessionTicketData sessionTicketData = new SessionTicketData();
+                sessionTicketData.setSessionId(sessionStatus.getSessionId());
+                List<SessionData> sessionDatas = sessionDataFacade.getSessionData(sessionStatus.getSessionId());
+                if(sessionDatas != null){
+                    for(SessionData sData : sessionDatas){
+                        switch (sData.getSessionkey()) {
+                            case StepsConfig.ENTER_CAR_BRAND:
+                                sessionTicketData.setCarBrand(sData.getSessionInput());
+                                break;
+                            case StepsConfig.ENTER_TICKET_TYPE:
+                                sessionTicketData.setTicketType(sData.getSessionInput());
+                                break;
+                            case StepsConfig.ENTER_NUMBER_PLATE:
+                                sessionTicketData.setnPlate(sData.getSessionInput());
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
+                if(sessionTicketData.getnPlate() != null){
+                    return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Imodoka: "+sessionTicketData.getCarBrand()+"^Ifite: "+sessionTicketData.getnPlate()+"^Ishyizwe muri parikingi."));
+                }
+                return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Hari ikibazo cyabaye mukwandika purake y'imodoka.^Mwongere mukanya."));
+            }else{
+                out.print(AppDesc.APP_DESC+"UssdProcessor processEntry requestor "+request.getMsisdn()+" Session count: "+sessionStatus.getStepsCount()+" Current Step: "+sessionStatus.getCurrentStep()+" Next Step: "+sessionStatus.getNextStep());
+                return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Hari ikibazo cyabaye mukwandika tiket y'imodoka.^Mwongere mukanya."));
+            }
+        }else{
+            out.print(AppDesc.APP_DESC+"UssdProcessor processEntry requestor "+request.getMsisdn()+" Session count: "+sessionStatus.getStepsCount()+" Current Step: "+sessionStatus.getCurrentStep()+" Next Step: "+sessionStatus.getNextStep());
+            return ReturnConfig.isSuccess(successGen(request, conductorNames+" ^Hari ikibazo cyabaye mukwandika tiket y'imodoka.^Mwongere mukanya."));
+        }
+    }
+    private boolean validateEntry(UserBean userBean){
+        if(userBean == null){
+            out.print(AppDesc.APP_DESC+"UssdProcessor validateEntry no user found.");
             return false;
         }
-        out.print(AppDesc.APP_DESC+"UssdProcessor validateEntry conductor found."+ responseConductor.getConductor().getConductorId());
+        out.print(AppDesc.APP_DESC+"UssdProcessor validateEntry conductor found."+ userBean.getUserId());
         return true;
     }
     private ResponseConductor getConductor(String msisdn){
         return apInterface.getConductor(msisdn);
     }
-    private String faillureGen(UssdRequest request, String message){
+    
+    private void reminder(SessionStatus sessionStatus){
+        DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");
+        Timestamp timestamp = new Timestamp(new Date().getTime());
+        Calendar calendar = Calendar.getInstance();
+        //add 9 minutes to the current date
+        calendar.setTimeInMillis(timestamp.getTime());
+        calendar.add(Calendar.MINUTE, 9);
+        timestamp = new Timestamp(calendar.getTime().getTime());
+        
+        out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest Schedule for progressive initiator: "+sessionStatus.getInitTel()+" will expire on: "+timestamp);
+        MyFrequency myFrequency = new MyFrequency("minute", "180000");
+        List<JobTasks> mTasks = new ArrayList<>();
+        JobTasks jobTasks = new JobTasks(sessionStatus.getSessionId(),
+                getClass().getName(),
+                myFrequency,
+                ApiConfig.PROGRESS_CALLBACK_URL,
+                1);
+        mTasks.add(jobTasks);
+        
+        MyJob mJob = new MyJob(sessionStatus.getSessionId(),
+                "daily",
+                getClass().getName(),
+                ApiConfig.PROGRESS_CALLBACK_URL,
+                dateFormat.format(timestamp),
+                true,
+                myFrequency,
+                mTasks);
+        createSchedule(mJob);
+    }
+    
+    private UserBean getUser(String msisdn){
+        return apInterface.getUserByTel(msisdn);
+    }
+    public String faillureGen(UssdRequest request, String message){
         List<String> menus = new ArrayList<>();
         Menu menu = new Menu(menus);
         UssdResponse response = new UssdResponse(request.getMsisdn(), request.getSessionId(), "B", message, 0, menu);
@@ -463,7 +585,7 @@ public class UssdProcessor {
         return outPut;
     }
     
-    private String successGen(UssdRequest request, String message){
+    public String successGen(UssdRequest request, String message){
         List<String> menus = new ArrayList<>();
         Menu menu = new Menu(menus);
         UssdResponse response = new UssdResponse(request.getMsisdn(), request.getSessionId(), "B", message, 0, menu);
@@ -471,7 +593,7 @@ public class UssdProcessor {
         return outPut;
     }
     
-    private String continueInput(String message, UssdRequest request){
+    public String continueInput(String message, UssdRequest request){
         List<String> menus = new ArrayList<>();
         String outPut;
         
@@ -482,7 +604,7 @@ public class UssdProcessor {
         return outPut;
     }
     
-    private String carInOutMenu(String message, UssdRequest request){
+    public String carInOutMenu(String message, UssdRequest request){
         List<String> menus = new ArrayList<>();
         String outPut;
         
@@ -498,6 +620,57 @@ public class UssdProcessor {
         
         Thread thread = new Thread(new BackgroundSchedule(true, mJob, openExternal, apInterface));
         thread.start();
+    }
+    
+    private String sessionIdGen(String ussdSesssionId){
+        try {
+            boolean check = false;
+            do{
+                SessionStatus sessionStatus = sessionStatusFacade.getLastSession(ussdSesssionId);
+                if(sessionStatus == null){
+                    return ussdSesssionId;
+                }
+                ussdSesssionId = idGenerator.generate();
+            }while(!check);
+            Thread.sleep(100);
+        } catch (InterruptedException ex) {
+            out.print(AppDesc.APP_DESC+"UssdProcessor sessionIdGen thread sleep failed due to: "+ ex.getLocalizedMessage());
+            Logger.getLogger(UssdProcessor.class.getName()).log(Level.SEVERE, null, ex);
+            return ussdSesssionId;
+        }
+        return ussdSesssionId;
+    }
+    
+    private void updateSession (SessionStatus sessionStatus){
+        out.print(AppDesc.APP_DESC+"UssdProcessor updateing Session for: "+sessionStatus.getSessionId());
+        sessionStatusFacade.edit(sessionStatus);
+        sessionStatusFacade.refreshSessionStatus();
+    }
+    private SessionStatus createSession(UssdRequest request, String sessionType, String nextStep){
+        out.print(AppDesc.APP_DESC+"UssdProcessor createSession for: "+request.getMsisdn());
+        
+        Date date = new Date();
+        SessionStatus sessionStatus = new SessionStatus(sessionIdGen(request.getSessionId()),
+                request.getMsisdn(),
+                StepsConfig.WLCM,
+                null,
+                nextStep,
+                false,
+                SessionDataStatus.ONGOING_STATUS,
+                date,
+                date,
+                "INITIALIZE SESSION",
+                sessionType,
+                0);
+        sessionStatusFacade.create(sessionStatus);
+        sessionStatusFacade.refreshSessionStatus();
+        return sessionStatus;
+    }
+    
+    private SessionData createSessionData(SessionData sessionData){
+        sessionDataFacade.create(sessionData);
+        sessionDataFacade.refreshSessiondata();
+        return sessionData;
     }
     
     private String idGenerator(){

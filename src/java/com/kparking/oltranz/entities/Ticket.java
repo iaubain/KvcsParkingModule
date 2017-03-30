@@ -62,11 +62,15 @@ public class Ticket implements Serializable {
     private String ticketType;
     @Column(name="recorded", nullable = false)
     private boolean recorded;
+    @Column(name="sessionId", nullable = false)
+    private String sessionId;
+    @Column(name="ticketStatus", nullable = false)
+    private String ticketStatus;
     
     public Ticket() {
     }
 
-    public Ticket(String ticketId, String numberPlate, String carBrand, String msisdn, String conductorId, String conductorName, String parkingId, String parkingDesc, Date inDate, Date outDate, String ticketType, boolean recorded) {
+    public Ticket(String ticketId, String numberPlate, String carBrand, String msisdn, String conductorId, String conductorName, String parkingId, String parkingDesc, Date inDate, Date outDate, String ticketType, boolean recorded, String sessionId, String ticketStatus) {
         this.ticketId = ticketId;
         this.numberPlate = numberPlate;
         this.carBrand = carBrand;
@@ -79,8 +83,10 @@ public class Ticket implements Serializable {
         this.outDate = outDate;
         this.ticketType = ticketType;
         this.recorded = recorded;
+        this.sessionId = sessionId;
+        this.ticketStatus = ticketStatus;
     }
-        
+ 
     public Long getId() {
         return id;
     }
@@ -208,6 +214,22 @@ public class Ticket implements Serializable {
 
     public void setCarBrand(String carBrand) {
         this.carBrand = carBrand;
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
+    }
+
+    public String getTicketStatus() {
+        return ticketStatus;
+    }
+
+    public void setTicketStatus(String ticketStatus) {
+        this.ticketStatus = ticketStatus;
     }
     
 }

@@ -5,19 +5,31 @@
 */
 package com.kparking.oltranz.logic;
 
+import com.kparking.oltranz.apiclient.ApInterface;
 import com.kparking.oltranz.config.AppDesc;
 import com.kparking.oltranz.config.HeaderConfig;
-import com.kparking.oltranz.entities.Progressive;
+import com.kparking.oltranz.entities.TempTicket;
 import com.kparking.oltranz.entities.Ticket;
-import com.kparking.oltranz.entities.UnfinishedTicket;
 import com.kparking.oltranz.facades.ProgressiveFacade;
+import com.kparking.oltranz.facades.TempTicketFacade;
+import com.kparking.oltranz.facades.TicketFacade;
 import com.kparking.oltranz.facades.UnfinishedTicketFacade;
+import com.kparking.oltranz.utilities.DataFactory;
 import com.kparking.oltranz.utilities.ReturnConfig;
 import static java.lang.System.out;
+import java.util.Date;
+import java.util.List;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
+import net.manzi.frs.config.StepsConfig;
+import net.manzi.frs.databeans.SessionTicketData;
+import net.manzi.frs.databeans.userbeans.UserBean;
+import net.manzi.frs.entities.SessionData;
+import net.manzi.frs.entities.SessionStatus;
+import net.manzi.frs.facades.SessionDataFacade;
+import net.manzi.frs.facades.SessionStatusFacade;
 
 /**
  *
@@ -35,6 +47,19 @@ public class CallBackHandler {
             UnfinishedTicketFacade unfinishedTicketFacade;
     @EJB
             SmsSender smsSender;
+    @EJB
+            SessionStatusFacade sessionStatusFacade;
+    @EJB
+            SessionDataFacade sessionDataFacade;
+    @EJB
+            TempTicketFacade tempTicketFacade;
+    @EJB
+            ApInterface apInterface;
+    @EJB
+            TicketFacade ticketFacade;
+    @EJB
+            CustomerProvider customerProvider;
+    
     public Response callBackreceiver(HttpHeaders headers){
         if(headers == null){
             out.print(AppDesc.APP_DESC+"CallBackHandler callBackreceiver received empty header.");
@@ -72,52 +97,128 @@ public class CallBackHandler {
             }
             
             out.print(AppDesc.APP_DESC+"CallBackHandler progressCallBack received JobId: "+jobId+" with a status: "+status);
-            Progressive progressive = progressiveFacade.getProgressById(jobId);
-            if(progressive == null){
+            
+            SessionStatus sessionStatus = sessionStatusFacade.getLastSession(jobId);
+            if(sessionStatus == null){
                 out.print(AppDesc.APP_DESC+"CallBackHandler progressCallBack did not find Progressive with ID: "+jobId);
                 return ReturnConfig.isSuccess("Success");
             }
             
-            if(!progressive.isIsFinished()){
-                out.print(AppDesc.APP_DESC+"CallBackHandler progressCallBack did not find Progressive with ID: "+jobId);
-                UnfinishedTicket unfinishedTicket = unfinishedTicketFacade.getUnFinishedTicketById(jobId);
-                if(unfinishedTicket == null){
-                    out.print(AppDesc.APP_DESC+"CallBackHandler progressCallBack creating initial unfinished ticket: "+jobId);
-                    unfinishedTicket = new UnfinishedTicket(progressive.getProgressId(),
-                            progressive.getInitMsisdn(),
-                            progressive.getNumberPlate(),
-                            progressive.getTicketType(),
-                            progressive.getCreatedOn(),
-                            progressive.getExpireIn(),
-                            progressive.isIsFinished(),
-                            0);
-                    unfinishedTicketFacade.create(unfinishedTicket);
-                    unfinishedTicketFacade.refreshUnFinTicket();
-                }else{
-                    out.print(AppDesc.APP_DESC+"CallBackHandler progressCallBack updating initial unfinished ticket: "+jobId+" with a count: "+unfinishedTicket.getCount());
-                    if(unfinishedTicket.getCount() <= 0){
-                        unfinishedTicket.setCount(unfinishedTicket.getCount()+1);
-                        unfinishedTicketFacade.edit(unfinishedTicket);
-                        unfinishedTicketFacade.refreshUnFinTicket();
-                        
-                        //send sms to conductor(Init ID)
-                        Ticket ticket = new Ticket();
-                        ticket.setMsisdn(progressive.getInitMsisdn());
-                        if(unfinishedTicket.getCount()<=6){
-                            Thread smsThread = new Thread(new BackgroundSMS(smsSender, null, ticket, "Imodoka: "+progressive.getNumberPlate()+" ifite agaticket utarangije. Wayandikiye: "+progressive.getCreatedOn(), true));
-                            smsThread.start();
-                        }else{
-                            //send notification on admin eMail // I will implement this later
-                        }
+            if(!sessionStatus.isCompleted()){
+                out.print(AppDesc.APP_DESC+"CallBackHandler progressCallBack unfinished session  ID: "+jobId);
+                List<SessionData> sessionDataList = sessionDataFacade.getSessionData(jobId);
+                if(sessionDataList != null){
+                    String sData = "";
+                    for(SessionData sessionData : sessionDataList){
+                        sData+=sessionData.getSessionkey()+":"+sessionData.getSessionInput();
                     }
-                    out.print(AppDesc.APP_DESC+"CallBackHandler progressCallBack removing progressive task: "+jobId+" of initiator: "+progressive.getInitMsisdn());
-                    
+                    sData = sData.isEmpty() ? " " : sData;
+                    Ticket ticket = new Ticket();
+                    ticket.setMsisdn(sessionStatus.getInitTel());
+                    Thread smsThread = new Thread(new BackgroundSMS(smsSender, null, ticket, "Ufite Itike itarangiye: "+sData, true));
+                    smsThread.start();
                 }
             }
             out.print(AppDesc.APP_DESC+"CallBackHandler progressCallBack succeeded to generate additional tictet JobId: "+jobId+" with a status: "+status);
             return ReturnConfig.isSuccess("Success");
         } catch (Exception e) {
             out.print(AppDesc.APP_DESC+"CallBackHandler progressCallBack error occured due to: "+e.getMessage());
+            return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Empty headers");
+        }
+    }
+    
+    public Response tempTicket(HttpHeaders headers){
+        try {
+            if(headers == null){
+                out.print(AppDesc.APP_DESC+"CallBackHandler tempTicket received empty header.");
+                return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Empty headers");
+            }
+            String jobId = headers.getHeaderString(HeaderConfig.JOB_ID);
+            String status = headers.getHeaderString(HeaderConfig.JOB_STATUS);
+            
+            if(jobId == null){
+                out.print(AppDesc.APP_DESC+"CallBackHandler tempTicket received JobId: null with a status: "+status);
+                return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Empty headers");
+            }
+            
+            out.print(AppDesc.APP_DESC+"CallBackHandler tempTicket received JobId: "+jobId+" with a status: "+status);
+            
+            TempTicket tempTicket = tempTicketFacade.getLastTempBySession(jobId);
+            if(tempTicket == null){
+                out.print(AppDesc.APP_DESC+"CallBackHandler tempTicket did not find TempTicket with SessionId: "+jobId);
+                return ReturnConfig.isSuccess("Success");
+            }
+            
+            UserBean userBean = apInterface.getUserByTel(tempTicket.getMsisdn());
+            if(userBean == null){
+                out.print(AppDesc.APP_DESC+"CallBackHandler tempTicket did not find User with TEL: "+tempTicket.getMsisdn());
+                return ReturnConfig.isSuccess("Success");
+            }
+            SessionStatus sessionStatus = sessionStatusFacade.getLastSession(jobId);
+            if(sessionStatus == null){
+                out.print(AppDesc.APP_DESC+"CallBackHandler tempTicket did not find Session with ID: "+jobId);
+                return ReturnConfig.isSuccess("Success");
+            }
+            SessionTicketData sessionTicketData = new SessionTicketData();
+            sessionTicketData.setSessionId(jobId);
+            List<SessionData> sessionDatas = sessionDataFacade.getSessionData(jobId);
+            if(sessionDatas != null){
+                for(SessionData sData : sessionDatas){
+                    switch (sData.getSessionkey()) {
+                        case StepsConfig.ENTER_CAR_BRAND:
+                            sessionTicketData.setCarBrand(sData.getSessionInput());
+                            break;
+                        case StepsConfig.ENTER_TICKET_TYPE:
+                            sessionTicketData.setTicketType(sData.getSessionInput());
+                            break;
+                        case StepsConfig.ENTER_NUMBER_PLATE:
+                            sessionTicketData.setnPlate(sData.getSessionInput());
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+            String result = ticketManager.genTicket(sessionStatus, userBean, sessionTicketData);
+            tempTicketFacade.remove(tempTicket);
+            tempTicketFacade.refreshTemp();
+            out.print(AppDesc.APP_DESC+"CallBackHandler tempTicket succeeded to new ticket from temp ticket SessionId: "+jobId+" ticketManager result: "+result);
+            return ReturnConfig.isSuccess("Success");
+        } catch (Exception e) {
+            out.print(AppDesc.APP_DESC+"CallBackHandler tempTicket error occured due to: "+e.getMessage());
+            return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Empty headers");
+        }
+    }
+    
+    public Response tNotification(HttpHeaders headers){
+        try {
+            if(headers == null){
+                out.print(AppDesc.APP_DESC+"CallBackHandler tNotification received empty header.");
+                return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Empty headers");
+            }
+            String jobId = headers.getHeaderString(HeaderConfig.JOB_ID);
+            String status = headers.getHeaderString(HeaderConfig.JOB_STATUS);
+            
+            if(jobId == null){
+                out.print(AppDesc.APP_DESC+"CallBackHandler tNotification received JobId: null with a status: "+status);
+                return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Empty headers");
+            }
+            
+            out.print(AppDesc.APP_DESC+"CallBackHandler tNotification received JobId: "+jobId+" with a status: "+status);
+            String sessionId = DataFactory.splitString(jobId, "=>|")[1];
+            Ticket ticket = ticketFacade.getSessionLastTicket(sessionId);
+            if(ticket == null){
+                out.print(AppDesc.APP_DESC+"CallBackHandler tNotification did not find Ticket with sessionId: "+sessionId);
+                return ReturnConfig.isSuccess("Success");
+            }
+            
+            Thread smsThread2 = new Thread(new BackgroundSMS(smsSender, customerProvider, ticket, ticket.getConductorName()+" harabura iminota  "+(60-DataFactory.printDifference(ticket.getInDate(), new Date()))+" kugirango Imodoka "+ticket.getNumberPlate()+ " yandikirwe itike.", true));
+            smsThread2.start();
+            
+            out.print(AppDesc.APP_DESC+"CallBackHandler tNotification succeeded to acknowledge conductor with Tel:"+DataFactory.splitString(jobId, "=>|")[0]+" about ticket: "+ticket.getTicketId()+" sessionId: "+sessionId+"Time remaining to complete an hour: "+(60-DataFactory.printDifference(ticket.getInDate(), new Date())));
+            return ReturnConfig.isSuccess("Success");
+        } catch (Exception e) {
+            out.print(AppDesc.APP_DESC+"CallBackHandler tNotification error occured due to: "+e.getMessage());
             return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Empty headers");
         }
     }

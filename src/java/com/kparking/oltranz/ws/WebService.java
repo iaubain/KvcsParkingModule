@@ -68,6 +68,22 @@ public class WebService {
     }
     
     @GET
+    @Path("/tempTicket")
+    public Response tempTicket(@Context HttpServletRequest requestContext, @Context HttpHeaders headers, String body){
+        out.print(AppDesc.APP_DESC+" Source IP: " + requestContext.getRemoteAddr() + ", Port: " + requestContext.getRemotePort() + ", Host: " + requestContext.getRemoteHost());
+        out.print(AppDesc.APP_DESC+" Node Received Headers "+headers.toString()+" and Body  "+body);
+        return appReceiver.tempTicket(requestContext.getRemoteAddr(), requestContext.getRemotePort(), headers, body);//.clientReceiver(headers, body);
+    }
+    
+    @GET
+    @Path("/tNotication")
+    public Response tNotication(@Context HttpServletRequest requestContext, @Context HttpHeaders headers, String body){
+        out.print(AppDesc.APP_DESC+" Source IP: " + requestContext.getRemoteAddr() + ", Port: " + requestContext.getRemotePort() + ", Host: " + requestContext.getRemoteHost());
+        out.print(AppDesc.APP_DESC+" Node Received Headers "+headers.toString()+" and Body  "+body);
+        return appReceiver.tNotification(requestContext.getRemoteAddr(), requestContext.getRemotePort(), headers, body);//.clientReceiver(headers, body);
+    }
+    
+    @GET
     @Path("/getAllTickets")
     public Response getAllTickets(@Context HttpServletRequest requestContext, @Context HttpHeaders headers, String body){
         out.print(AppDesc.APP_DESC+" Source IP: " + requestContext.getRemoteAddr() + ", Port: " + requestContext.getRemotePort() + ", Host: " + requestContext.getRemoteHost());

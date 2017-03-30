@@ -13,16 +13,20 @@ import com.kparking.oltranz.config.SMSConfig;
 import com.kparking.oltranz.config.StatusConfig;
 import com.kparking.oltranz.entities.CallBack;
 import com.kparking.oltranz.entities.Progressive;
+import com.kparking.oltranz.entities.TempTicket;
 import com.kparking.oltranz.entities.Ticket;
 import com.kparking.oltranz.facades.CallBackFacade;
 import com.kparking.oltranz.facades.ProgressiveFacade;
+import com.kparking.oltranz.facades.TempTicketFacade;
 import com.kparking.oltranz.facades.TicketFacade;
 import com.kparking.oltranz.simplebeans.commonbeans.ConductorBean;
 import com.kparking.oltranz.simplebeans.commonbeans.ParkingBean;
 import com.kparking.oltranz.simplebeans.schedule.JobTasks;
 import com.kparking.oltranz.simplebeans.schedule.MyFrequency;
 import com.kparking.oltranz.simplebeans.schedule.MyJob;
+import com.kparking.oltranz.utilities.DataFactory;
 import com.kparking.oltranz.utilities.IdGenerator;
+import com.kparking.oltranz.utilities.TicketFactory;
 import static java.lang.System.out;
 import java.sql.Timestamp;
 import java.text.DateFormat;
@@ -35,6 +39,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
+import net.manzi.frs.config.MenuMessage;
+import net.manzi.frs.config.SessionDataStatus;
+import net.manzi.frs.databeans.SessionTicketData;
+import net.manzi.frs.databeans.userbeans.UserBean;
+import net.manzi.frs.entities.SessionStatus;
 
 /**
  *
@@ -59,6 +68,178 @@ public class TicketManager {
             CustomerProvider customerProvider;
     @EJB
             ProgressiveFacade progressiveFacade;
+    @EJB
+            TempTicketFacade tempTicketFacade;
+    
+    public void setCarBrandOnTicket(SessionStatus sessionStatus, String carBrand){
+        Ticket ticket = ticketFacade.getSessionLastTicket(sessionStatus.getSessionId());
+        if(ticket == null){
+            out.print(AppDesc.APP_DESC+"No ticket found to set the brand "+carBrand+" for session: "+sessionStatus.getSessionId());
+            return;
+        }
+        ticket.setCarBrand(carBrand);
+        ticketFacade.edit(ticket);
+        ticketFacade.refreshTicket();
+    }
+    
+    public String genTicket(SessionStatus sessionStatus, UserBean userBean, SessionTicketData sessionTicketData){
+        try {
+            Date date = new Date();
+            String conductorNames = userBean.getfName() != null ? userBean.getfName() : "" +userBean.getOtherNames() != null ? userBean.getOtherNames() : "";
+            Ticket ticket = ticketFacade.getCustormerLastTicket(sessionTicketData.getnPlate());
+            if(ticket != null){
+                DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");
+                out.print(AppDesc.APP_DESC+" UssdProcessor genNewTicket last ticket: "+ticket.getTicketId()+" startDate: "+dateFormat.parse(dateFormat.format(ticket.getInDate())));
+                Date startDate = dateFormat.parse(dateFormat.format(ticket.getInDate()));
+                
+                Date endDate = dateFormat.parse(dateFormat.format(new Date()));
+                out.print(AppDesc.APP_DESC+" UssdProcessor genNewTicket ticket endDate: "+endDate);
+                
+                long durationMinutes = DataFactory.printDifference(startDate, endDate);
+                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+ticket.getNumberPlate()+" was parked in: "+ticket.getParkingDesc()+" by conductor: "+ticket.getConductorName()+" and Id: "+ticket.getConductorId()+" elapsed minutes from last ticket: "+durationMinutes+" minutes.");
+                
+                if(ticket.getInDate().compareTo(date) < 0)
+                    if(durationMinutes > 0 && durationMinutes < 60){
+                        
+                        Timestamp timestamp = new Timestamp(new Date().getTime());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.setTimeInMillis(timestamp.getTime());
+                        calendar.add(Calendar.MINUTE, (int) durationMinutes);
+                        
+                        long nextReminder = (60 - durationMinutes)*60*1000;
+                        
+                        TempTicket tempTicket = new TempTicket(sessionStatus.getSessionId(),
+                                sessionStatus.getInitTel(),
+                                userBean.getUserId()+"",
+                                conductorNames,
+                                sessionTicketData.getnPlate(),
+                                sessionTicketData.getTicketType(),
+                                date,
+                                userBean.getAgentZoneId()+"",
+                                userBean.getLocationName()+"-"+userBean.getAgentZoneName(),
+                                calendar.getTime());
+                        tempTicketFacade.create(tempTicket);
+                        tempTicketFacade.refreshTemp();
+                        
+                        reminder(sessionStatus, nextReminder, calendar.getTime());
+                        return "SUCCESS";
+                    }
+            }
+            Timestamp timestamp = new Timestamp(date.getTime());
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTimeInMillis(timestamp.getTime());
+            calendar.add(Calendar.HOUR, 1);
+            
+            ticket = new Ticket(idGenerator(),
+                    sessionTicketData.getnPlate(),
+                    "",
+                    sessionStatus.getInitTel(),
+                    userBean.getUserId()+"",
+                    conductorNames,
+                    userBean.getAgentZoneId()+"",
+                    userBean.getLocationName()+"-"+userBean.getAgentZoneName(),
+                    new Date(),
+                    calendar.getTime(),
+                    sessionTicketData.getTicketType(),
+                    false,
+                    sessionStatus.getSessionId(),
+                    SessionDataStatus.ONGOING_STATUS);
+            ticketFacade.create(ticket);
+            ticketFacade.refreshTicket();
+            
+            Thread thread = new Thread(new BackGroundPublishTicket(apInterface,
+                    ticketFacade,
+                    new TicketFactory().genTicketToPublish(ticket)));
+            thread.start();
+            
+            CallBack callBack = callBackFacade.getTicketById(ticket.getTicketId());
+            if(callBack == null){
+                out.print(AppDesc.APP_DESC+"TicketManager genNewTicket No callback entry found and creating an entry for this ticket: "+ticket.getTicketId());
+                callBack = new CallBack(ticket.getTicketId(),
+                        ticket.getNumberPlate(),
+                        0,
+                        StatusConfig.CREATED,
+                        StatusConfig.CREATED_DESC,
+                        date,
+                        date);
+                callBackFacade.create(callBack);
+                callBackFacade.refreshCallBack();
+            }
+            // create schedule
+            //            MyFrequency myFrequency = new MyFrequency("minute", "180000");
+            MyFrequency myFrequency = new MyFrequency("hour", "3600000");
+            List<JobTasks> mTasks = new ArrayList<>();
+            JobTasks jobTasks = new JobTasks(sessionStatus.getSessionId(),
+                    getClass().getName(),
+                    myFrequency,
+                    ApiConfig.CALLBACK_URL,
+                    1);
+            mTasks.add(jobTasks);
+            
+            //Get the current date
+            DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");
+            timestamp = new Timestamp(new Date().getTime());
+            calendar = Calendar.getInstance();
+            out.print(AppDesc.APP_DESC+"TicketManager genNewTicket Schedule for ticket "+ticket.getTicketId()+" is triged now: "+timestamp);
+            
+            calendar.setTimeInMillis(timestamp.getTime());
+            calendar.add(Calendar.HOUR, 4);
+            timestamp = new Timestamp(calendar.getTime().getTime());
+            
+            out.print(AppDesc.APP_DESC+"TicketManager genNewTicket Schedule for ticket "+ticket.getTicketId()+" will expire on: "+timestamp);
+            
+            MyJob mJob = new MyJob(sessionStatus.getSessionId(),
+                    "daily",
+                    getClass().getName(),
+                    ApiConfig.TICKET_NOTIFICATION_URL,
+                    dateFormat.format(timestamp),
+                    true,
+                    myFrequency,
+                    mTasks);
+            createSchedule(mJob);
+            
+            Thread.sleep(100);
+            
+            myFrequency = new MyFrequency("hour", "3300000");
+            jobTasks = new JobTasks(sessionStatus.getInitTel()+"=>|"+sessionStatus.getSessionId(),
+                    getClass().getName(),
+                    myFrequency,
+                    ApiConfig.TICKET_NOTIFICATION_URL,
+                    1);
+            mTasks.add(jobTasks);
+            
+            //Get the current date
+            dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");
+            timestamp = new Timestamp(new Date().getTime());
+            calendar = Calendar.getInstance();
+            out.print(AppDesc.APP_DESC+"TicketManager genNewTicket Schedule for ticket "+ticket.getTicketId()+" is triged now: "+timestamp);
+            
+            calendar.setTimeInMillis(timestamp.getTime());
+            calendar.add(Calendar.HOUR, 4);
+            timestamp = new Timestamp(calendar.getTime().getTime());
+            
+            out.print(AppDesc.APP_DESC+"TicketManager genNewTicket Schedule for ticket "+ticket.getTicketId()+" will expire on: "+timestamp);
+            
+            mJob = new MyJob(sessionStatus.getInitTel()+sessionStatus.getSessionId(),
+                    "daily",
+                    getClass().getName(),
+                    ApiConfig.TICKET_NOTIFICATION_URL,
+                    dateFormat.format(timestamp),
+                    true,
+                    myFrequency,
+                    mTasks);
+            createSchedule(mJob);
+            
+            Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, ticket, SMSConfig.CAR_IN_MSG+ticket.getNumberPlate()+" "+ticket.getParkingDesc()+" / "+timestamp, false));
+            smsThread.start();
+            
+            return "SUCCESS";
+            
+        } catch (Exception e) {
+            out.print(AppDesc.APP_DESC+"TicketManager genNewTicket Failed to generate ticket due to: "+e.getMessage());
+            return MenuMessage.TICKET_PROBLEM;
+        }
+    }
     public boolean genNewTicket(ConductorBean conductorBean, ParkingBean parkingBean, String initmsisdn){
         try{
             Progressive progressive = progressiveFacade.getConductorLastProgressive(initmsisdn);
@@ -81,7 +262,9 @@ public class TicketManager {
                     new Date(),
                     null,
                     progressive.getTicketType(),
-                    false);
+                    false,
+                    "sessionId",
+                    SessionDataStatus.ONGOING_STATUS);
             ticketFacade.create(ticket);
             ticketFacade.refreshTicket();
             
@@ -156,30 +339,33 @@ public class TicketManager {
                 return false;
             }
             Date date = new Date();
-            if(isCancelSched){
+            
+            if(oTicket.getTicketStatus().equals(SessionDataStatus.ONGOING_STATUS)){
                 CallBack callBack = callBackFacade.getCustormerLastCallback(numberPlate);
                 if(callBack != null){
-                    MyJob mJob = new MyJob();
-                    mJob.setJobId(callBack.getTicketId());
-                    cancelSchedule(mJob);
-                    
                     callBack.setNumberOfCallBack(callBack.getNumberOfCallBack()+1);
                     callBack.setLastAccess(date);
                     callBackFacade.edit(callBack);
                     callBackFacade.refreshCallBack();
                 }
-                DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");
                 
+                DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");
                 Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, oTicket, SMSConfig.CAR_OUT_MSG+oTicket.getNumberPlate()+" "+oTicket.getParkingDesc()+"/"+dateFormat.format(date), false));
                 smsThread.start();
             }
-            if(oTicket.getOutDate() != null){
-                out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket ticket already timedout for: "+numberPlate);
-                return true;
+            if(!oTicket.getTicketType().equals(SessionDataStatus.COMPLETED_STATUS)){
+                oTicket.setTicketStatus(SessionDataStatus.COMPLETED_STATUS);
+                oTicket.setOutDate(date);
+                ticketFacade.edit(oTicket);
+                ticketFacade.refreshTicket();
             }
-            oTicket.setOutDate(date);
-            ticketFacade.edit(oTicket);
-            ticketFacade.refreshTicket();
+            MyJob mJob = new MyJob();
+            mJob.setJobId(oTicket.getSessionId());
+            cancelSchedule(mJob);
+            
+            mJob = new MyJob();
+            mJob.setJobId(oTicket.getMsisdn()+oTicket.getSessionId());
+            cancelSchedule(mJob);
             return true;
         }catch(Exception e){
             out.print(AppDesc.APP_DESC+"TicketManager setTicketOutDate Failed to generate ticket due to:" +e.getLocalizedMessage());
@@ -187,26 +373,26 @@ public class TicketManager {
         }
     }
     
-    public boolean genAdditionalTicket(String oldTicket){
+    public boolean genAdditionalTicket(String ticketSessionId){
         try{
-            Ticket checkTicket = ticketFacade.getTicketById(oldTicket);
+            Ticket checkTicket = ticketFacade.getSessionLastTicket(ticketSessionId);
             MyJob mJob = new MyJob();
-            mJob.setJobId(oldTicket);
+            mJob.setJobId(ticketSessionId);
             if(checkTicket == null){
                 //cancel the scheduler
                 cancelSchedule(mJob);
-                out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket Failed to generate ticket due to: null old ticket from ticket id: "+oldTicket);
+                out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket Failed to generate ticket due to: null result from ticket id: "+ticketSessionId);
                 return false;
             }
             
-            CallBack callBack = callBackFacade.getTicketById(oldTicket);
+            CallBack callBack = callBackFacade.getTicketById(checkTicket.getTicketId());
             if(callBack == null){
-                out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket No callback entry found for this ticket: "+oldTicket);
+                out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket No callback entry found for this ticket: "+ticketSessionId);
                 cancelSchedule(mJob);
                 return true;
             }else{
                 if(callBack.getNumberOfCallBack()<=0){
-                    out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket first callBack for this ticket: "+oldTicket);
+                    out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket first callBack for this ticket: "+ticketSessionId);
                     callBack.setNumberOfCallBack(callBack.getNumberOfCallBack()+1);
                     callBack.setLastAccess(new Date());
                     callBackFacade.edit(callBack);
@@ -217,19 +403,19 @@ public class TicketManager {
                 callBack.setLastAccess(new Date());
                 callBackFacade.edit(callBack);
                 callBackFacade.refreshCallBack();
-                out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket "+callBack.getNumberOfCallBack()+" callBack for this ticket: "+oldTicket);
+                out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket "+callBack.getNumberOfCallBack()+" callBack for this ticket: "+ticketSessionId);
             }
             
             Ticket oTicket = ticketFacade.getCustormerLastTicket(checkTicket.getNumberPlate());
             if(oTicket == null){
-                out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket Failed to generate ticket due to: no ticket found for : "+oldTicket);
+                out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket Failed to generate ticket due to: no ticket found for : "+ticketSessionId);
                 return false;
             }
             
-            if(oTicket.getOutDate() != null){
-                out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket Car "+oTicket.getNumberPlate()+" ticket "+oldTicket+" was taken already out of the parking: "+oTicket.getParkingId());
-                return true;
-            }
+            //            if(oTicket.getOutDate() != null){
+            //                out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket Car "+oTicket.getNumberPlate()+" ticket "+ticketSessionId+" was taken already out of the parking: "+oTicket.getParkingId());
+            //                return true;
+            //            }
             Date date = new Date();
             oTicket.setOutDate(new Date());
             ticketFacade.edit(oTicket);
@@ -237,8 +423,10 @@ public class TicketManager {
             Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, checkTicket, SMSConfig.CAR_ADDED_VALUE+" isaha "+elapsedTime+" (z)irashize, hour(s) elapsed, heure(s) ecoule "+oTicket.getNumberPlate()+" / "+oTicket.getParkingDesc(), false));
             smsThread.start();
             
-            Thread smsThread2 = new Thread(new BackgroundSMS(smsSender, customerProvider, checkTicket, oTicket.getConductorName()+" isaha "+elapsedTime+" (z)irashize "+oTicket.getNumberPlate()+" iri muri parking: "+oTicket.getParkingDesc(), true));
-            smsThread2.start();
+            Timestamp timestamp = new Timestamp(date.getTime());
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTimeInMillis(timestamp.getTime());
+            calendar.add(Calendar.HOUR, 1);
             
             Ticket nTicket = new Ticket(idGenerator(),
                     oTicket.getNumberPlate(),
@@ -249,11 +437,17 @@ public class TicketManager {
                     oTicket.getParkingId(),
                     oTicket.getParkingDesc(),
                     date,
-                    null,
+                    calendar.getTime(),
                     oTicket.getTicketType(),
-                    false);
+                    false,
+                    oTicket.getSessionId(),
+                    SessionDataStatus.ONGOING_STATUS);
             ticketFacade.create(nTicket);
             ticketFacade.refreshTicket();
+            Thread thread = new Thread(new BackGroundPublishTicket(apInterface,
+                    ticketFacade,
+                    new TicketFactory().genTicketToPublish(nTicket)));
+            thread.start();
             return true;
         }catch(Exception e){
             out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket Failed to generate ticket due to: "+e.getMessage());
@@ -297,5 +491,34 @@ public class TicketManager {
             return genId;
         }
         return genId;
+    }
+    
+    private void reminder(SessionStatus sessionStatus, long frequency, Date expireIn){
+        DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");
+        Timestamp timestamp = new Timestamp(expireIn.getTime());
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(timestamp.getTime());
+        calendar.add(Calendar.MINUTE, 3);
+        timestamp = new Timestamp(calendar.getTime().getTime());
+        
+        out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest Schedule for progressive initiator: "+sessionStatus.getInitTel()+" will expire on: "+timestamp);
+        MyFrequency myFrequency = new MyFrequency("minute", ""+frequency);
+        List<JobTasks> mTasks = new ArrayList<>();
+        JobTasks jobTasks = new JobTasks(sessionStatus.getSessionId(),
+                getClass().getName(),
+                myFrequency,
+                ApiConfig.TEMPTICKET_CALLBACK_URL,
+                1);
+        mTasks.add(jobTasks);
+        
+        MyJob mJob = new MyJob(sessionStatus.getSessionId(),
+                "daily",
+                getClass().getName(),
+                ApiConfig.TEMPTICKET_CALLBACK_URL,
+                dateFormat.format(timestamp),
+                true,
+                myFrequency,
+                mTasks);
+        createSchedule(mJob);
     }
 }

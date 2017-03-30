@@ -38,6 +38,12 @@ public class AppReceiver {
     public Response progressCallBack(String sourceIp, int sourcePort, HttpHeaders headers, String body){
         return callBackHandler.progressCallBack(headers);
     }
+    public Response tempTicket(String sourceIp, int sourcePort, HttpHeaders headers, String body){
+        return callBackHandler.tempTicket(headers);
+    }
+     public Response tNotification(String sourceIp, int sourcePort, HttpHeaders headers, String body){
+        return callBackHandler.tNotification(headers);
+    }
     public Response getAllTickets(String sourceIp, int sourcePort, HttpHeaders headers, String body){
         return appProcessor.getAllTickets();
     }

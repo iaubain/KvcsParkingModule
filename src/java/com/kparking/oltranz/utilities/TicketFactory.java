@@ -7,9 +7,13 @@ package com.kparking.oltranz.utilities;
 
 import com.kparking.oltranz.config.AppDesc;
 import com.kparking.oltranz.entities.Ticket;
+import com.kparking.oltranz.simplebeans.ticketsreport.PublishTicketRequest;
 import com.kparking.oltranz.simplebeans.ticketsreport.TicketBean;
 import static java.lang.System.out;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import javax.ejb.Stateless;
 
@@ -40,10 +44,25 @@ public class TicketFactory {
                 ticket.getParkingDesc(),
                 ticket.getConductorId(),
                 ticket.getConductorName(),
+                ticket.getMsisdn(),
                 ticket.getNumberPlate(),
                 ticket.getCarBrand() != null?ticket.getCarBrand():"",
                 ticket.getTicketType() != null?ticket.getTicketType():"100",
                 ticket.getInDate() != null?ticket.getInDate().toString():"",
                 ticket.getOutDate() != null?ticket.getOutDate().toString():"");
+    }
+    
+    public PublishTicketRequest genTicketToPublish(Ticket ticket){  
+        DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");      
+        return new PublishTicketRequest(new Date().getTime()+"",
+                "1", 
+                ticket.getTicketId(), 
+                ticket.getNumberPlate(), 
+                ticket.getConductorId(), 
+                ticket.getCarBrand() != null ? ticket.getCarBrand() : "", 
+                Integer.parseInt(ticket.getTicketType()), 
+                Integer.parseInt(ticket.getParkingId()), 
+                dateFormat.format(ticket.getInDate()), 
+                dateFormat.format(ticket.getOutDate()));
     }
 }

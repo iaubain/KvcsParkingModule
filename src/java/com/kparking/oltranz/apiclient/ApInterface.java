@@ -15,12 +15,15 @@ import com.kparking.oltranz.simplebeans.conductors.ResponseConductor;
 import com.kparking.oltranz.simplebeans.schedule.CancelSceduledJob;
 import com.kparking.oltranz.simplebeans.schedule.MyJob;
 import com.kparking.oltranz.simplebeans.sms.SmsSendResponse;
+import com.kparking.oltranz.simplebeans.ticketsreport.PublishTicketRequest;
+import com.kparking.oltranz.simplebeans.ticketsreport.PublishTicketResponse;
 import com.kparking.oltranz.utilities.DataFactory;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
+import net.manzi.frs.databeans.userbeans.UserBean;
 
 /**
  *
@@ -89,5 +92,24 @@ public class ApInterface {
                 headers,
                 outStream,
                 MediaType.APPLICATION_JSON, SmsSendResponse.class);
+    }
+    
+    public UserBean getUserByTel(String msisdn){
+        return (UserBean) openExternal.goGet(ApiConfig.GET_USER_BY_TEL+""+msisdn, 
+        null, 
+        MediaType.APPLICATION_JSON, 
+        UserBean.class);
+    }
+    
+    public PublishTicketResponse publishTicket(PublishTicketRequest publishTicketRequest){
+        headers = new MultivaluedHashMap<>();
+        headers.putSingle(HeaderConfig.CONTENT, MediaType.APPLICATION_JSON);
+        headers.putSingle(HeaderConfig.DOMAIN, ApiConfig.PUBLISH_TICKET_DOMAIN);
+        headers.putSingle(HeaderConfig.CMD, ApiConfig.PUBLISH_TICKET_CMD);
+        return (PublishTicketResponse) openExternal.doPost(ApiConfig.PUBLISH_TICKET,
+                headers,
+                DataFactory.objectToString(publishTicketRequest),
+                MediaType.APPLICATION_JSON,
+                PublishTicketResponse.class);
     }
 }

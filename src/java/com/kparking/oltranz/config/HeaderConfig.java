@@ -21,4 +21,7 @@ public class HeaderConfig {
     public static final String TASK_ID="Task_Id";
     public static final String TASK_DOMAIN="Task_Domain";
     public static final String JOB_STATUS="Status";
+    
+    //Publish ticket
+    public static final String DOMAIN="Domain";
 }
