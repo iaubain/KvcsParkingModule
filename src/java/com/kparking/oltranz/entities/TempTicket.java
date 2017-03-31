@@ -54,11 +54,15 @@ public class TempTicket implements Serializable {
     @Column(name="expire", length = 30, nullable = false)
     @Temporal(javax.persistence.TemporalType.TIMESTAMP)
     private Date expire;
+    @Column(name="status", length = 522, nullable = true)
+    private String ticketStatus;
+    @Column(name="count", length = 522, nullable = true)
+    private int count;
     
     public TempTicket() {
     }
 
-    public TempTicket(String sessionId, String msisdn, String conductorId, String conductorName, String numberPlate, String ticketType, Date created, String parkingId, String parkingDesc, Date expire) {
+    public TempTicket(String sessionId, String msisdn, String conductorId, String conductorName, String numberPlate, String ticketType, Date created, String parkingId, String parkingDesc, Date expire, String ticketStatus, int count) {
         this.sessionId = sessionId;
         this.msisdn = msisdn;
         this.conductorId = conductorId;
@@ -69,7 +73,11 @@ public class TempTicket implements Serializable {
         this.parkingId = parkingId;
         this.parkingDesc = parkingDesc;
         this.expire = expire;
+        this.ticketStatus = ticketStatus;
+        this.count = count;
     }
+
+   
 
     public String getConductorId() {
         return conductorId;
@@ -182,6 +190,22 @@ public class TempTicket implements Serializable {
     
     public void setParkingDesc(String parkingDesc) {
         this.parkingDesc = parkingDesc;
+    }
+
+    public String getTicketStatus() {
+        return ticketStatus;
+    }
+
+    public void setTicketStatus(String ticketStatus) {
+        this.ticketStatus = ticketStatus;
+    }
+
+    public int getCount() {
+        return count;
+    }
+
+    public void setCount(int count) {
+        this.count = count;
     }
     
 }

@@ -52,11 +52,13 @@ public class SessionStatus implements Serializable {
     private String sessionType;
     @Column(name="stepsCount", nullable = false)
     private int stepsCount;
+    @Column(name="callbackCount", nullable = false)
+    private int callbackCount;
 
     public SessionStatus() {
     }
 
-    public SessionStatus(String sessionId, String initTel, String currentStep, String currentInput, String nextStep, boolean completed, String sessionStatus, Date creationDate, Date lastAccessDate, String lastAction, String sessionType, int stepsCount) {
+    public SessionStatus(String sessionId, String initTel, String currentStep, String currentInput, String nextStep, boolean completed, String sessionStatus, Date creationDate, Date lastAccessDate, String lastAction, String sessionType, int stepsCount, int callbackCount) {
         this.sessionId = sessionId;
         this.initTel = initTel;
         this.currentStep = currentStep;
@@ -69,8 +71,9 @@ public class SessionStatus implements Serializable {
         this.lastAction = lastAction;
         this.sessionType = sessionType;
         this.stepsCount = stepsCount;
+        this.callbackCount = callbackCount;
     }
-
+    
     public Long getId() {
         return id;
     }
@@ -198,6 +201,14 @@ public class SessionStatus implements Serializable {
 
     public void setStepsCount(int stepsCount) {
         this.stepsCount = stepsCount;
+    }
+
+    public int getCallbackCount() {
+        return callbackCount;
+    }
+
+    public void setCallbackCount(int callbackCount) {
+        this.callbackCount = callbackCount;
     }
     
 }

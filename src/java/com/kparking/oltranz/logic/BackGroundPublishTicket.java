@@ -37,7 +37,7 @@ public class BackGroundPublishTicket implements Runnable {
         PublishTicketResponse publishTicketResponse = apInterface.publishTicket(publishTicketRequest);
         if(publishTicketResponse != null){
             out.print(AppDesc.APP_DESC+"BackGroundPublishTicket run going to edit ticket according to the publishTicketResponse");
-            if(publishTicketResponse.getCode() == 200){
+            if(publishTicketResponse.getCode() == 100){
                 Ticket ticket = ticketFacade.getTicketById(publishTicketRequest.getTicketId());
                 if(ticket != null){
                     out.print(AppDesc.APP_DESC+"BackGroundPublishTicket run ticket: "+ticket.getTicketId()+" is being set to published.");

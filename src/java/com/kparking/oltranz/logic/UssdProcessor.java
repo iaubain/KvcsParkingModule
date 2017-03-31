@@ -12,10 +12,12 @@ import com.kparking.oltranz.config.AppDesc;
 import com.kparking.oltranz.entities.CallBack;
 import com.kparking.oltranz.entities.Car;
 import com.kparking.oltranz.entities.Progressive;
+import com.kparking.oltranz.entities.TempTicket;
 import com.kparking.oltranz.entities.Ticket;
 import com.kparking.oltranz.facades.CallBackFacade;
 import com.kparking.oltranz.facades.CarFacade;
 import com.kparking.oltranz.facades.ProgressiveFacade;
+import com.kparking.oltranz.facades.TempTicketFacade;
 import com.kparking.oltranz.facades.TicketFacade;
 import com.kparking.oltranz.simplebeans.commonbeans.ConductorBean;
 import com.kparking.oltranz.simplebeans.conductors.ResponseConductor;
@@ -85,6 +87,8 @@ public class UssdProcessor {
             SessionStatusFacade sessionStatusFacade;
     @EJB
             SessionDataFacade sessionDataFacade;
+    @EJB
+            TempTicketFacade tempTicketFacade;
     
     public Response receiveCarInRequest(UssdRequest request){
         try{
@@ -190,16 +194,25 @@ public class UssdProcessor {
                 return ReturnConfig.isSuccess(faillureGen(request, "Ikaze, "+conductorNames+"^Plaque: "+request.getInput()+" Reba niba yanditse neza."));
             }
             
+            TempTicket tempTicket = tempTicketFacade.getLastCustomerTempTicket(request.getInput());
+            if(tempTicket != null && tempTicket.getTicketStatus().equals(SessionDataStatus.ONGOING_STATUS)){
+                tempTicket.setTicketStatus(SessionDataStatus.CANCELLED_STATUS);
+                tempTicketFacade.edit(tempTicket);
+                tempTicketFacade.refreshTemp();
+            }
+            
             Ticket ticket = ticketFacade.getCustormerLastTicket(request.getInput());
             if(ticket == null){
+                
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+request.getInput()+" with no ticket: by conductor: "+request.getMsisdn());
                 return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Imodoka. "+request.getInput()+"^Ntago ibonetse."));
             }
+            
             if(ticket.getTicketStatus().equals(SessionDataStatus.COMPLETED_STATUS)){
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+request.getInput()+" with ticket: "+ticket.getTicketId()+" by conductor: "+request.getMsisdn());
                 return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Imodoka. "+request.getInput()+"^Yamaze gukurwa muri parikingi.^Isaha yakuwemo: "+ticket.getOutDate()));
             }
-            if(!ticket.getConductorId().equals(userBean.getUserId())){
+            if(!ticket.getMsisdn().equals(request.getMsisdn())){
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+request.getInput()+" with ticket: "+ticket.getTicketId()+" request by conductor: "+request.getMsisdn()+" Initiated by: "+ticket.getConductorId());
                 return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Imodoka. "+request.getInput()+"^Yashyizwe muri parking na: "+ticket.getConductorName()+"^Saa: "+ticket.getOutDate()+"^Kuri: "+ticket.getParkingDesc()));
             }
@@ -239,7 +252,7 @@ public class UssdProcessor {
             String lastTime = null;
             CallBack callBack = callBackFacade.getCustormerLastCallback(request.getInput());
             if(callBack != null){
-                DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");
+                DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd HH:mm:ss");
                 lastTime = dateFormat.format(callBack.getCreatedOn());
                 out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a car with "+request.getInput()+" last date: "+lastTime+" Requestor: "+request.getMsisdn());
                 
@@ -401,7 +414,7 @@ public class UssdProcessor {
                 sessionStatus.setLastAccessDate(date);
                 sessionStatus.setLastAction("REQUESTING NUMBER PLATE CAPTURE");
                 updateSession(sessionStatus);
-                return ReturnConfig.isSuccess(carInOutMenu("Guparika^"+conductorNames,request));
+                return ReturnConfig.isSuccess(carInOutMenu("Guparika^"+conductorNames+" ",request));
             }else if(sessionStatus.getCurrentStep().equals(StepsConfig.WLCM) && sessionStatus.getStepsCount() == 1 && sessionStatus.getNextStep().equals(StepsConfig.ENTER_NUMBER_PLATE)){
                 out.print(AppDesc.APP_DESC+"UssdProcessor processEntry requestor "+request.getMsisdn()+" Session count: "+sessionStatus.getStepsCount()+" Current Step: "+sessionStatus.getCurrentStep()+" Next Step: "+sessionStatus.getNextStep());
                 
@@ -477,7 +490,7 @@ public class UssdProcessor {
                 String result = ticketManager.genTicket(sessionStatus, userBean, sessionTicketData);
                 if(!result.equals("SUCCESS")){
                     out.print(AppDesc.APP_DESC+" UssdProcessor processEntry failed to generate ticket result: "+result);
-                    return ReturnConfig.isSuccess(successGen(request, conductorNames+"^Habaye ikibazo mugukora agatike^Mwongere mukanya"));
+                    return ReturnConfig.isSuccess(successGen(request, conductorNames+"^"+result));
                 }
                 return ReturnConfig.isSuccess(continueInput(conductorNames+"^Andika ubwoko bw'imodoka^Ifite: "+ numberPlate ,request));
             }else if(sessionStatus.getCurrentStep().equals(StepsConfig.ENTER_TICKET_TYPE) && sessionStatus.getStepsCount() == 3 && sessionStatus.getNextStep().equals(StepsConfig.ENTER_CAR_BRAND)){
@@ -545,7 +558,8 @@ public class UssdProcessor {
     }
     
     private void reminder(SessionStatus sessionStatus){
-        DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");
+        String extension = idGenerator.generate();
+        DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd HH:mm:ss");
         Timestamp timestamp = new Timestamp(new Date().getTime());
         Calendar calendar = Calendar.getInstance();
         //add 9 minutes to the current date
@@ -556,18 +570,18 @@ public class UssdProcessor {
         out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest Schedule for progressive initiator: "+sessionStatus.getInitTel()+" will expire on: "+timestamp);
         MyFrequency myFrequency = new MyFrequency("minute", "180000");
         List<JobTasks> mTasks = new ArrayList<>();
-        JobTasks jobTasks = new JobTasks(sessionStatus.getSessionId(),
+        JobTasks jobTasks = new JobTasks(extension+"^"+sessionStatus.getSessionId(),
                 getClass().getName(),
                 myFrequency,
                 ApiConfig.PROGRESS_CALLBACK_URL,
                 1);
         mTasks.add(jobTasks);
         
-        MyJob mJob = new MyJob(sessionStatus.getSessionId(),
+        MyJob mJob = new MyJob(extension+"^"+sessionStatus.getSessionId(),
                 "daily",
                 getClass().getName(),
                 ApiConfig.PROGRESS_CALLBACK_URL,
-                dateFormat.format(timestamp),
+                dateFormat.format(calendar.getTime()),
                 true,
                 myFrequency,
                 mTasks);
@@ -661,6 +675,7 @@ public class UssdProcessor {
                 date,
                 "INITIALIZE SESSION",
                 sessionType,
+                0,
                 0);
         sessionStatusFacade.create(sessionStatus);
         sessionStatusFacade.refreshSessionStatus();

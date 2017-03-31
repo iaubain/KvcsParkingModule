@@ -53,7 +53,7 @@ public class TicketFactory {
     }
     
     public PublishTicketRequest genTicketToPublish(Ticket ticket){  
-        DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd hh:mm:ss");      
+        DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd HH:mm:ss");      
         return new PublishTicketRequest(new Date().getTime()+"",
                 "1", 
                 ticket.getTicketId(), 

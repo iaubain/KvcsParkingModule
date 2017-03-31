@@ -145,7 +145,9 @@ public class DataFactory {
     
     public static final String[] splitString(String input, String criteria){
         out.print(AppDesc.APP_DESC+"DataFactory splitString going to split: "+ input+" based on criteria: ["+criteria+"]");
-        return input.split(criteria);
+        String[] outPut = input.split("\\"+criteria);
+        out.print(AppDesc.APP_DESC+"DataFactory splitString sample result: part 0: "+outPut[0]+" part 1: "+outPut[1]);
+        return outPut;
     }
     
     public static final String phoneFormat(String input){
