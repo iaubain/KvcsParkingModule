@@ -75,16 +75,30 @@ public class CallBackHandler {
         
         if(jobId == null){
             out.print(AppDesc.APP_DESC+"CallBackHandler callBackreceiver received JobId: null with a status: "+status);
-            return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Empty headers");
+            return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Empty jobId in headers");
         }
         
-        out.print(AppDesc.APP_DESC+"CallBackHandler callBackreceiver received JobId: "+jobId+" with a status: "+status);
-        if(!ticketManager.genAdditionalTicket(jobId)){
-            out.print(AppDesc.APP_DESC+"CallBackHandler callBackreceiver failed to generate additional tictet JobId: "+jobId+" with a status: "+status);
-            return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Client faillure");
+        CallBackCounter callBackCounter = callBackCounterFacade.getLastSession(jobId);
+        if(callBackCounter == null){
+            out.print(AppDesc.APP_DESC+"CallBackHandler callBackreceiver received callbackCounter: "+jobId+" is being created due to empty result");
+            callBackCounter = new CallBackCounter(jobId, 1, new Date());
+            callBackCounterFacade.create(callBackCounter);
+            callBackCounterFacade.refreshCounter();
+            out.print(AppDesc.APP_DESC+"CallBackHandler callBackreceiver created callback counter instance: "+jobId);
+            return ReturnConfig.isSuccess("Success");
         }
-        out.print(AppDesc.APP_DESC+"CallBackHandler callBackreceiver succeeded to generate additional tictet JobId: "+jobId+" with a status: "+status);
-        return ReturnConfig.isSuccess("Success");
+        if(callBackCounter.getCallbackCount() >= 1){
+            out.print(AppDesc.APP_DESC+"CallBackHandler callBackreceiver received JobId: "+jobId+" with a status: "+status);
+            if(!ticketManager.genAdditionalTicket(jobId)){
+                out.print(AppDesc.APP_DESC+"CallBackHandler callBackreceiver failed to generate additional tictet JobId: "+jobId+" with a status: "+status);
+                return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Client faillure");
+            }
+            out.print(AppDesc.APP_DESC+"CallBackHandler callBackreceiver succeeded to generate additional tictet sessionId: "+jobId);
+            return ReturnConfig.isSuccess("Success");
+        }else{
+            out.print(AppDesc.APP_DESC+"CallBackHandler callBackreceiver callback counter has invalid data: "+callBackCounter.getCallbackCount());
+            return ReturnConfig.isSuccess("Success");
+        }        
     }
     
     public Response progressCallBack(HttpHeaders headers){
@@ -250,7 +264,7 @@ public class CallBackHandler {
                 }
                 
                 if(!ticket.getTicketStatus().equals(SessionDataStatus.COMPLETED_STATUS)){
-                    Thread smsThread2 = new Thread(new BackgroundSMS(smsSender, customerProvider, ticket, ticket.getConductorName()+" harabura iminota  "+(60-DataFactory.printDifference(ticket.getInDate(), new Date()))+" kugirango Imodoka "+ticket.getNumberPlate()+ " yandikirwe itike.", true));
+                    Thread smsThread2 = new Thread(new BackgroundSMS(smsSender, customerProvider, ticket, ticket.getConductorName()+" harabura iminota  "+5+" kugirango Imodoka "+ticket.getNumberPlate()+ " yandikirwe itike.", true));//(60-DataFactory.printDifference(ticket.getInDate(), new Date()))
                     smsThread2.start();
                 }
                 

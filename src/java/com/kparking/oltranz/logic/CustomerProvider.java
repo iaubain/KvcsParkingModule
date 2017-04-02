@@ -25,13 +25,16 @@ public class CustomerProvider {
         Car car = carFacade.getCustormerLastRecord(nPlate);
         if(car == null){
             out.print(AppDesc.APP_DESC+"CustomerProvider genMsisdn failed to get Car owner MSISDN");
-            return initMsisdn;
+            return null;
         }
         
         if(car.getCreatorTel() != null){
-            return car.getCreatorTel();
+            String tel = car.getCreatorTel();
+            out.print(AppDesc.APP_DESC+"CustomerProvider genMsisdn car owner MSISDN: "+tel);
+            return tel;
         }else{
-            return initMsisdn;
+            out.print(AppDesc.APP_DESC+"CustomerProvider genMsisdn failed to get Car owner MSISDN");
+            return null;
         }
     }
 }

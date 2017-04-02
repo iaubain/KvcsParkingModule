@@ -147,6 +147,24 @@ public class TicketFacade extends AbstractFacade<Ticket> {
         }
     }
     
+     public Ticket getSessionFirstTicket(String sessionId){
+        try{
+            if(sessionId.isEmpty())
+                return null;
+            Query q= em.createQuery("Select T from Ticket T WHERE T.sessionId = :sessionId ORDER BY T.id ASC");
+            q.setParameter("sessionId", sessionId)
+                    .setMaxResults(1);
+            List<Ticket> list = (List<Ticket>)q.getResultList();
+            if(!list.isEmpty())
+                return list.get(0);
+            else
+                return null;
+        }catch(Exception ex){
+            ex.printStackTrace(out);
+            return null;
+        }
+    }
+    
     public List<Ticket> getSessionTickets(String sessionId){
         try{
             if(sessionId.isEmpty())

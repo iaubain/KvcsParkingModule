@@ -25,14 +25,17 @@ import javax.ejb.Stateless;
 public class SmsSender {
     @EJB
             ApInterface apInterface;
-    public void send(String destMsisdn, String message){        
+    public void send(String destMsisdn, String message){
         try{
+            if(destMsisdn.isEmpty()){
+                out.print(AppDesc.APP_DESC+"SmsSender send missing destination address for message: "+message);
+            }
             String outStream = DataFactory.objectToString(new SendSmsRequest(SMSConfig.SRC_1, destMsisdn, message, 0, ApiConfig.SMS_CONTRACT));
-        out.print(AppDesc.APP_DESC+"SmsSender send sending: "+ outStream);
-        SmsSendResponse smsSendResponse = apInterface.sendSMS(outStream);
-        out.print(AppDesc.APP_DESC+"SmsSender send received: "+ DataFactory.objectToString(smsSendResponse));
+            out.print(AppDesc.APP_DESC+"SmsSender send sending: "+ outStream);
+            SmsSendResponse smsSendResponse = apInterface.sendSMS(outStream);
+            out.print(AppDesc.APP_DESC+"SmsSender send received: "+ DataFactory.objectToString(smsSendResponse));
         }catch(Exception e){
             out.print(AppDesc.APP_DESC+"SmsSender send sending to: "+ destMsisdn+" with message: "+message+" failed due to: "+e.getLocalizedMessage());
-        }       
+        }
     }
 }
