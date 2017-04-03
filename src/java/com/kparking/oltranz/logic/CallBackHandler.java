@@ -256,7 +256,7 @@ public class CallBackHandler {
                 out.print(AppDesc.APP_DESC+"CallBackHandler tNotification created callback counter instance: "+jobId);
                 return ReturnConfig.isSuccess("Success");
             }
-            if(callBackCounter.getCallbackCount() >= 1){
+            if(callBackCounter.getCallbackCount() == 1){
                 Ticket ticket = ticketFacade.getSessionLastTicket(sessionId);
                 if(ticket == null){
                     out.print(AppDesc.APP_DESC+"CallBackHandler tNotification did not find Ticket with sessionId: "+sessionId);
@@ -274,6 +274,11 @@ public class CallBackHandler {
                 
                 out.print(AppDesc.APP_DESC+"CallBackHandler tNotification succeeded to acknowledge conductor with Tel:"+DataFactory.splitString(jobId, "^")[0]+" about ticket: "+ticket.getTicketId()+" sessionId: "+sessionId+"Time remaining to complete an hour: "+(60-DataFactory.printDifference(ticket.getInDate(), new Date())));
                 return ReturnConfig.isSuccess("Success");
+            }else{
+                out.print(AppDesc.APP_DESC+"CallBackHandler tNotification a call back : "+jobId+" came at: "+callBackCounter.getCallbackCount()+"th and its has no effect");
+                callBackCounter.setCallbackCount(callBackCounter.getCallbackCount()+1);
+                callBackCounterFacade.edit(callBackCounter);
+                callBackCounterFacade.refreshCounter();
             }
             
             out.print(AppDesc.APP_DESC+"CallBackHandler tNotification succeeded ac ounter did match the counting indexes for calback counter instance: "+jobId);
