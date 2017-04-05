@@ -12,10 +12,12 @@ import com.kparking.oltranz.config.AppDesc;
 import com.kparking.oltranz.config.SMSConfig;
 import com.kparking.oltranz.config.StatusConfig;
 import com.kparking.oltranz.entities.CallBack;
+import com.kparking.oltranz.entities.ParkingInfo;
 import com.kparking.oltranz.entities.Progressive;
 import com.kparking.oltranz.entities.TempTicket;
 import com.kparking.oltranz.entities.Ticket;
 import com.kparking.oltranz.facades.CallBackFacade;
+import com.kparking.oltranz.facades.ParkingInfoFacade;
 import com.kparking.oltranz.facades.ProgressiveFacade;
 import com.kparking.oltranz.facades.TempTicketFacade;
 import com.kparking.oltranz.facades.TicketFacade;
@@ -70,6 +72,8 @@ public class TicketManager {
             ProgressiveFacade progressiveFacade;
     @EJB
             TempTicketFacade tempTicketFacade;
+    @EJB
+            ParkingInfoFacade parkingInfoFacade;
     
     public void setCarBrandOnTicket(SessionStatus sessionStatus, String carBrand){
         Ticket ticket = ticketFacade.getSessionLastTicket(sessionStatus.getSessionId());
@@ -86,6 +90,26 @@ public class TicketManager {
         try {
             Date date = new Date();
             String conductorNames = userBean.getfName() != null ? userBean.getfName() : "" +userBean.getOtherNames() != null ? userBean.getOtherNames() : "";
+            
+            ParkingInfo parkingInfo = parkingInfoFacade.getCustomerLastParkiInfo(sessionTicketData.getnPlate());
+            if(parkingInfo != null){
+                if(parkingInfo.getOutDate() == null){
+                    parkingInfo.setOutDate(date);
+                    parkingInfoFacade.edit(parkingInfo);
+                    parkingInfoFacade.refreshParkInfo();
+                }
+            }
+            
+            parkingInfo = new ParkingInfo(sessionTicketData.getnPlate(),
+                    date,
+                    null,
+                    sessionStatus.getInitTel(),
+                    sessionStatus.getSessionId(),
+                    userBean.getAgentZoneId()+"",
+                    date);
+            parkingInfoFacade.create(parkingInfo);
+            parkingInfoFacade.refreshParkInfo();
+            
             Ticket ticket = ticketFacade.getCustormerLastTicket(sessionTicketData.getnPlate());
             if(ticket != null){
                 
@@ -267,6 +291,15 @@ public class TicketManager {
     
     public boolean setTicketOutDate(boolean isCancelSched, String numberPlate){
         try{
+            
+            ParkingInfo parkingInfo = parkingInfoFacade.getCustomerLastParkiInfo(numberPlate);
+            if(parkingInfo != null){
+                if(parkingInfo.getOutDate() == null){
+                    parkingInfo.setOutDate(new Date());
+                    parkingInfoFacade.edit(parkingInfo);
+                    parkingInfoFacade.refreshParkInfo();
+                }
+            }
             Ticket oTicket = ticketFacade.getCustormerLastTicket(numberPlate);
             if(oTicket == null){
                 out.print(AppDesc.APP_DESC+"TicketManager genAdditionalTicket Failed to generate ticket due to: no ticket found for : "+numberPlate);
@@ -308,6 +341,7 @@ public class TicketManager {
     
     public boolean genAdditionalTicket(String ticketSessionId){
         try{
+            
             Ticket oTicket = ticketFacade.getSessionLastTicket(ticketSessionId);
             if(oTicket == null){
                 //cancel the schedule
@@ -345,6 +379,19 @@ public class TicketManager {
                     SessionDataStatus.ONGOING_STATUS);
             ticketFacade.create(nTicket);
             ticketFacade.refreshTicket();
+            
+            ParkingInfo parkingInfo = parkingInfoFacade.getCustomerLastParkiInfo(nTicket.getNumberPlate());
+            if(parkingInfo == null){
+                parkingInfo = new ParkingInfo(nTicket.getSessionId(),
+                        date,
+                        null,
+                        nTicket.getMsisdn(),
+                        nTicket.getSessionId(),
+                        nTicket.getParkingId(),
+                        date);
+                parkingInfoFacade.create(parkingInfo);
+                parkingInfoFacade.refreshParkInfo();
+            }
             
             Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, oTicket, SMSConfig.CAR_ADDED_VALUE+" isaha "+elapsedTime+" (z)irashize, hour(s) elapsed, heure(s) ecoule "+oTicket.getNumberPlate()+" / "+oTicket.getParkingDesc(), false));
             smsThread.start();

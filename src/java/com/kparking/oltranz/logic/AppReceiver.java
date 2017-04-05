@@ -20,6 +20,8 @@ public class AppReceiver {
             AppProcessor appProcessor;
     @EJB
             CallBackHandler callBackHandler;
+    @EJB
+            ParkingInfoExposed parkingInfoExposed;
     public Response clientCarIn(String sourceIp, int sourcePort, HttpHeaders headers, String body){
         return appProcessor.carInprocessor(headers, body);
     }
@@ -41,10 +43,14 @@ public class AppReceiver {
     public Response tempTicket(String sourceIp, int sourcePort, HttpHeaders headers, String body){
         return callBackHandler.tempTicket(headers);
     }
-     public Response tNotification(String sourceIp, int sourcePort, HttpHeaders headers, String body){
+    public Response tNotification(String sourceIp, int sourcePort, HttpHeaders headers, String body){
         return callBackHandler.tNotification(headers);
     }
     public Response getAllTickets(String sourceIp, int sourcePort, HttpHeaders headers, String body){
         return appProcessor.getAllTickets();
+    }
+    
+    public Response getParkInfo(String sourceIp, int sourcePort, HttpHeaders headers, String body){
+        return parkingInfoExposed.receiver(headers);
     }
 }

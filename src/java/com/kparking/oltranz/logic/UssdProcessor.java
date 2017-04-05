@@ -90,6 +90,7 @@ public class UssdProcessor {
     @EJB
             TempTicketFacade tempTicketFacade;
     
+    
     public Response receiveCarInRequest(UssdRequest request){
         try{
             //check user validity by MSISDN
