@@ -9,6 +9,7 @@ import com.kparking.oltranz.entities.ParkingInfo;
 import com.kparking.oltranz.facades.ParkingInfoFacade;
 import com.kparking.oltranz.utilities.DataFactory;
 import com.kparking.oltranz.utilities.ReturnConfig;
+import com.kparking.oltranz.utilities.TicketFactory;
 import java.util.List;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -24,6 +25,8 @@ import javax.ws.rs.core.Response;
 public class ParkingInfoExposed {
     @EJB
             ParkingInfoFacade parkingInfoFacade;
+    @EJB
+            TicketFactory ticketFactory;
     
     /*
     Apply an HTTP method: GET
@@ -43,16 +46,16 @@ public class ParkingInfoExposed {
     
     public Response receiver(HttpHeaders headers){
 //        String what;
-        
-        if(headers.getHeaderString("MSISDN") != null){
-            return parkInfoByMsisdn(headers.getHeaderString("MSISDN"));
-        }
-        if(headers.getHeaderString("N_PLATE") != null){
-            return parkInfoByNmberPlate(headers.getHeaderString("N_PLATE"));
-        }
-        if(headers.getHeaderString("PARK_SES") != null){
-            return parkInfoBySession(headers.getHeaderString("PARK_SES"));
-        }
+
+if(headers.getHeaderString("MSISDN") != null){
+    return parkInfoByMsisdn(headers.getHeaderString("MSISDN"));
+}
+if(headers.getHeaderString("N_PLATE") != null){
+    return parkInfoByNmberPlate(headers.getHeaderString("N_PLATE"));
+}
+if(headers.getHeaderString("PARK_SES") != null){
+    return parkInfoBySession(headers.getHeaderString("PARK_SES"));
+}
 //        if(headers.getHeaderString("CMD") != null){
 //            what = headers.getHeaderString("CMD");
 //            switch(what){
@@ -66,27 +69,27 @@ public class ParkingInfoExposed {
 //                    return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Invalid command.");
 //            }
 //        }
-        return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Try again, something went wrong");
+return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Try again, something went wrong");
     }
     private Response parkInfoByMsisdn(String msisdn){
         List<ParkingInfo> parkingInfos = parkingInfoFacade.getConductorParkInfo(msisdn);
         if(parkingInfos == null){
             return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Try again, something went wrong or no data found");
         }
-        return ReturnConfig.isSuccess(DataFactory.objectToString(parkingInfos));
+        return ReturnConfig.isSuccess(DataFactory.objectToString(ticketFactory.genParkingInfoList(parkingInfos)));
     }
     private Response parkInfoByNmberPlate(String numberPlate){
         List<ParkingInfo> parkingInfos = parkingInfoFacade.getCustomerParkInfo(numberPlate.toUpperCase());
         if(parkingInfos == null){
             return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Try again, something went wrong or no data found");
         }
-        return ReturnConfig.isSuccess(DataFactory.objectToString(parkingInfos));
+        return ReturnConfig.isSuccess(DataFactory.objectToString(ticketFactory.genParkingInfoList(parkingInfos)));
     }
     private Response parkInfoBySession(String sessionId){
         List<ParkingInfo> parkingInfos = parkingInfoFacade.getSessionParkInfo(sessionId);
         if(parkingInfos == null){
             return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Try again, something went wrong or no data found");
         }
-        return ReturnConfig.isSuccess(DataFactory.objectToString(parkingInfos));
+        return ReturnConfig.isSuccess(DataFactory.objectToString(ticketFactory.genParkingInfoList(parkingInfos)));
     }
 }

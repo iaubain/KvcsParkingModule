@@ -382,7 +382,7 @@ public class TicketManager {
             
             ParkingInfo parkingInfo = parkingInfoFacade.getCustomerLastParkiInfo(nTicket.getNumberPlate());
             if(parkingInfo == null){
-                parkingInfo = new ParkingInfo(nTicket.getSessionId(),
+                parkingInfo = new ParkingInfo(nTicket.getNumberPlate(),
                         date,
                         null,
                         nTicket.getMsisdn(),

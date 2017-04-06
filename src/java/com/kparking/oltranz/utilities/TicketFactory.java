@@ -6,7 +6,9 @@
 package com.kparking.oltranz.utilities;
 
 import com.kparking.oltranz.config.AppDesc;
+import com.kparking.oltranz.entities.ParkingInfo;
 import com.kparking.oltranz.entities.Ticket;
+import com.kparking.oltranz.simplebeans.parking.ParkingInfoBean;
 import com.kparking.oltranz.simplebeans.ticketsreport.PublishTicketRequest;
 import com.kparking.oltranz.simplebeans.ticketsreport.TicketBean;
 import static java.lang.System.out;
@@ -52,17 +54,37 @@ public class TicketFactory {
                 ticket.getOutDate() != null?ticket.getOutDate().toString():"");
     }
     
-    public PublishTicketRequest genTicketToPublish(Ticket ticket){  
-        DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd HH:mm:ss");      
+    public PublishTicketRequest genTicketToPublish(Ticket ticket){
+        DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd HH:mm:ss");
         return new PublishTicketRequest(new Date().getTime()+"",
-                "1", 
-                ticket.getTicketId(), 
-                ticket.getNumberPlate(), 
-                ticket.getConductorId(), 
-                ticket.getCarBrand() != null ? ticket.getCarBrand() : "", 
-                Integer.parseInt(ticket.getTicketType()), 
-                Integer.parseInt(ticket.getParkingId()), 
-                dateFormat.format(ticket.getInDate()), 
+                "1",
+                ticket.getTicketId(),
+                ticket.getNumberPlate(),
+                ticket.getConductorId(),
+                ticket.getCarBrand() != null ? ticket.getCarBrand() : "",
+                Integer.parseInt(ticket.getTicketType()),
+                Integer.parseInt(ticket.getParkingId()),
+                dateFormat.format(ticket.getInDate()),
                 dateFormat.format(ticket.getOutDate()));
+    }
+    
+    public ParkingInfoBean genParkingInfo(ParkingInfo parkingInfo){
+        return new ParkingInfoBean(parkingInfo.getId()+"",
+                parkingInfo.getNumberPlate(),
+                new SimpleDateFormat("yyy-MM-dd HH:mm:ss").format(parkingInfo.getInDate()),
+                new SimpleDateFormat("yyy-MM-dd HH:mm:ss").format(parkingInfo.getOutDate()),
+                parkingInfo.getMsisdn(),
+                parkingInfo.getParkingSession(),
+                parkingInfo.getParkingId(),
+                new SimpleDateFormat("yyy-MM-dd HH:mm:ss").format(parkingInfo.getCreatedOn()));
+    }
+    
+    public List<ParkingInfoBean> genParkingInfoList(List<ParkingInfo> parkingInfoList){
+        List<ParkingInfoBean> parkingInfoBeans = new ArrayList<>();
+        for(ParkingInfo parkingInfo : parkingInfoList){
+            parkingInfoBeans.add(genParkingInfo(parkingInfo));
+        }
+        
+        return parkingInfoBeans;
     }
 }
