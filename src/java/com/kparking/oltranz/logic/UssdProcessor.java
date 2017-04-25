@@ -190,10 +190,10 @@ public class UssdProcessor {
             }
             
             request.setInput(request.getInput().replace(" ", "").toUpperCase());
-//            if(! DataFactory.numberPlateValidator(request.getInput())){
-//                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
-//                return ReturnConfig.isSuccess(faillureGen(request, "Ikaze, "+conductorNames+"^Plaque: "+request.getInput()+" Reba niba yanditse neza."));
-//            }
+            if(! DataFactory.numberPlateValidator(request.getInput())){
+                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
+                return ReturnConfig.isSuccess(faillureGen(request, "Ikaze, "+conductorNames+"^Plaque: "+request.getInput()+" Reba niba yanditse neza."));
+            }
             
             Ticket ticket = ticketFacade.getCustormerLastTicket(request.getInput());
             if(ticket == null){
@@ -246,10 +246,10 @@ public class UssdProcessor {
             }
             
             request.setInput(request.getInput().replace(" ", "").toUpperCase());
-//            if(! DataFactory.numberPlateValidator(request.getInput())){
-//                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
-//                return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza."));
-//            }
+            if(! DataFactory.numberPlateValidator(request.getInput())){
+                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
+                return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza."));
+            }
             Ticket ticket = ticketFacade.getCustormerLastTicket(request.getInput());
             if(ticket == null){
                 out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a car with "+request.getInput()+" with no ticket: by conductor: "+request.getMsisdn());
@@ -298,10 +298,10 @@ public class UssdProcessor {
             if(!validateEntry(userBean)){
                 out.print(AppDesc.APP_DESC+"UssdProcessor signupCar no conductor found for: "+request.getMsisdn());
                 request.setInput(request.getInput().replace(" ", "").toUpperCase());
-//                if(! DataFactory.numberPlateValidator(request.getInput())){
-//                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
-//                    return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza, Typo Error."));
-//                }
+                if(! DataFactory.numberPlateValidator(request.getInput())){
+                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
+                    return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza, Typo Error."));
+                }
                 car = new Car(request.getInput().toUpperCase(), request.getMsisdn(), "Owner", new Date());
                 carFacade.create(car);
                 carFacade.refreshCar();
@@ -313,10 +313,10 @@ public class UssdProcessor {
             String[] data = DataFactory.splitString(request.getInput(), " ");
             String numberPlate = data[0].toUpperCase();
             String tel = data[1];
-//            if(! DataFactory.numberPlateValidator(numberPlate)){
-//                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
-//                return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza, Typo Error."));
-//            }
+            if(! DataFactory.numberPlateValidator(numberPlate)){
+                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
+                return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza, Typo Error."));
+            }
             String tempTel = tel;
             tel = DataFactory.phoneFormat(tel);
             if(tel.isEmpty()){
@@ -427,9 +427,9 @@ public class UssdProcessor {
                 out.print(AppDesc.APP_DESC+"UssdProcessor processEntry requestor "+request.getMsisdn()+" Session count: "+sessionStatus.getStepsCount()+" Current Step: "+sessionStatus.getCurrentStep()+" Next Step: "+sessionStatus.getNextStep());
                 
                 request.setInput(request.getInput().replace(" ", "").toUpperCase());
-//                if(! DataFactory.numberPlateValidator(request.getInput())){
-//                    return ReturnConfig.isSuccess(carInOutMenu("Guparika^"+conductorNames+"^Plaque "+request.getInput()+" Ntiyemewe^",request));
-//                }
+                if(! DataFactory.numberPlateValidator(request.getInput())){
+                    return ReturnConfig.isSuccess(carInOutMenu("Guparika^"+conductorNames+"^Plaque "+request.getInput()+" Ntiyemewe^",request));
+                }
                 SessionData sessionData = new SessionData(sessionStatus.getSessionId(),
                         StepsConfig.ENTER_NUMBER_PLATE,
                         request.getInput(),

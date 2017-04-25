@@ -151,33 +151,34 @@ public class TicketManager {
                 Date endDate1 = formatter.parse(formatter.format(date));
                 
                 if(startDate1.getTime() == endDate1.getTime())
-                    if(durationMinutes > 0 && durationMinutes < 60){
-//                        if(ticket.getTicketStatus().equals(SessionDataStatus.ONGOING_STATUS)){
-//                            out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest an ongoing ticket for car with "+ticket.getNumberPlate()+" was parked in: "+ticket.getParkingDesc()+" by conductor: "+ticket.getConductorName()+" and Id: "+ticket.getConductorId()+" elapsed minutes from last ticket: "+durationMinutes+" minutes.");
-//                            return "Imodoka: "+ticket.getNumberPlate()+"^Iparitse: "+ticket.getParkingDesc()+"^Yashyizwemo: "+new SimpleDateFormat("yyy-MM-dd HH:mm:ss").format(ticket.getInDate());
-//                        }
-Calendar calendar = Calendar.getInstance();
-calendar.add(Calendar.MINUTE, (int) durationMinutes);
-
-long nextReminder = (60 - durationMinutes)*60*1000;
-
-TempTicket tempTicket = new TempTicket(sessionStatus.getSessionId(),
-        sessionStatus.getInitTel(),
-        userBean.getUserId()+"",
-        conductorNames,
-        sessionTicketData.getnPlate(),
-        sessionTicketData.getTicketType(),
-        date,
-        userBean.getAgentZoneId()+"",
-        userBean.getLocationName()+"-"+userBean.getAgentZoneName(),
-        calendar.getTime(),
-        SessionDataStatus.ONGOING_STATUS,
-        0);
-tempTicketFacade.create(tempTicket);
-tempTicketFacade.refreshTemp();
-
-reminder(sessionStatus, nextReminder, calendar.getTime());
-return "SUCCESS";
+                    if(durationMinutes >= 0 && durationMinutes < 60){
+                        //                        if(ticket.getTicketStatus().equals(SessionDataStatus.ONGOING_STATUS)){
+                        //                            out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest an ongoing ticket for car with "+ticket.getNumberPlate()+" was parked in: "+ticket.getParkingDesc()+" by conductor: "+ticket.getConductorName()+" and Id: "+ticket.getConductorId()+" elapsed minutes from last ticket: "+durationMinutes+" minutes.");
+                        //                            return "Imodoka: "+ticket.getNumberPlate()+"^Iparitse: "+ticket.getParkingDesc()+"^Yashyizwemo: "+new SimpleDateFormat("yyy-MM-dd HH:mm:ss").format(ticket.getInDate());
+                        //                        }
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.add(Calendar.MINUTE, (int) durationMinutes);
+                        
+                        long nextReminder = (60 - durationMinutes)*60*1000;
+                        
+                        TempTicket tempTicket = new TempTicket(sessionStatus.getSessionId(),
+                                sessionStatus.getInitTel(),
+                                userBean.getUserId()+"",
+                                conductorNames,
+                                sessionTicketData.getnPlate(),
+                                sessionTicketData.getTicketType(),
+                                date,
+                                userBean.getAgentZoneId()+"",
+                                userBean.getLocationName()+"-"+userBean.getAgentZoneName(),
+                                calendar.getTime(),
+                                SessionDataStatus.ONGOING_STATUS,
+                                0);
+                        tempTicketFacade.create(tempTicket);
+                        tempTicketFacade.refreshTemp();
+                        
+                        reminder(sessionStatus, nextReminder, calendar.getTime());
+                        //return "SUCCESS";
+                        return "Imodoka: "+ticket.getNumberPlate()+"^Yariparitse: "+ticket.getParkingDesc()+"^Irandikirwa nyuma: "+durationMinutes+"min"+"^Yashyizwemo: "+new SimpleDateFormat("yyy-MM-dd HH:mm:ss").format(ticket.getInDate());
                     }
             }
             Calendar calendar = Calendar.getInstance();
