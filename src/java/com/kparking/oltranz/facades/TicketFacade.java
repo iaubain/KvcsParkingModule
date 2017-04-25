@@ -5,8 +5,10 @@
 */
 package com.kparking.oltranz.facades;
 
+import com.kparking.oltranz.config.AppDesc;
 import com.kparking.oltranz.entities.Ticket;
 import static java.lang.System.out;
+import java.util.Date;
 import java.util.List;
 import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
@@ -174,6 +176,41 @@ public class TicketFacade extends AbstractFacade<Ticket> {
             List<Ticket> list = (List<Ticket>)q.getResultList();
             
             return list.isEmpty() ? null : list;
+        }catch(Exception ex){
+            ex.printStackTrace(out);
+            return null;
+        }
+    }
+    
+    public List<Ticket> getActiveParkingByDate(Date startDate, Date endDate){
+        try{
+            Query q= em.createQuery("Select T from Ticket T WHERE T.inDate >= :startDate AND T.inDate <= :endDate GROUP BY T.parkingId ORDER BY T.id DESC");
+            q.setParameter("startDate", startDate)
+                    .setParameter("endDate", endDate);
+            List<Ticket> list = (List<Ticket>)q.getResultList();
+            
+            return list.isEmpty() ? null : list;
+        }catch(Exception ex){
+            ex.printStackTrace(out);
+            return null;
+        }
+    }
+    
+    public Long getParkingCarCount(Date startDate, Date endDate, String parkingId){
+        try{
+            if(parkingId.isEmpty()){
+                out.print(AppDesc.APP_DESC+"TicketFacade getParkingCarCount got an empty parkingId");
+                return null;
+            }
+            Query q= em.createQuery("Select T from Ticket T WHERE (T.inDate BETWEEN :startDate AND :endDate) AND (T.parkingId = :parkingId) GROUP BY T.numberPlate ORDER BY T.id DESC");
+            q.setParameter("startDate", startDate)
+                    .setParameter("endDate", endDate)
+                    .setParameter("parkingId", parkingId);
+            List<Ticket> list = (List<Ticket>)q.getResultList();
+            
+            Long count = Long.parseLong(list.size()+"");
+            out.print(AppDesc.APP_DESC+"TicketFacade getParkingCarCount got a parkingId: "+parkingId+" and was frequented by car:"+count);
+            return count;
         }catch(Exception ex){
             ex.printStackTrace(out);
             return null;

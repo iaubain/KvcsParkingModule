@@ -190,10 +190,10 @@ public class UssdProcessor {
             }
             
             request.setInput(request.getInput().replace(" ", "").toUpperCase());
-            if(! DataFactory.numberPlateValidator(request.getInput())){
-                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
-                return ReturnConfig.isSuccess(faillureGen(request, "Ikaze, "+conductorNames+"^Plaque: "+request.getInput()+" Reba niba yanditse neza."));
-            }
+//            if(! DataFactory.numberPlateValidator(request.getInput())){
+//                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
+//                return ReturnConfig.isSuccess(faillureGen(request, "Ikaze, "+conductorNames+"^Plaque: "+request.getInput()+" Reba niba yanditse neza."));
+//            }
             
             Ticket ticket = ticketFacade.getCustormerLastTicket(request.getInput());
             if(ticket == null){
@@ -202,10 +202,15 @@ public class UssdProcessor {
                 return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Imodoka. "+request.getInput()+"^Ntago ibonetse."));
             }
             
+            /*
+            Uncoment this if the one that put the car in prking is the one that must remove it.
+            */
+            /*
             if(!ticket.getMsisdn().equals(request.getMsisdn())){
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+request.getInput()+" with ticket: "+ticket.getTicketId()+" request by conductor: "+request.getMsisdn()+" Initiated by: "+ticket.getConductorId());
                 return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Imodoka. "+request.getInput()+"^Yashyizwe muri parking na: "+ticket.getConductorName()+"^Saa: "+ticket.getOutDate()+"^Kuri: "+ticket.getParkingDesc()));
             }
+            */
             
             TempTicket tempTicket = tempTicketFacade.getLastCustomerTempTicket(request.getInput());
             if(tempTicket != null && tempTicket.getTicketStatus().equals(SessionDataStatus.ONGOING_STATUS)){
@@ -219,7 +224,7 @@ public class UssdProcessor {
                 return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Imodoka. "+request.getInput()+"^Yamaze gukurwa muri parikingi.^Isaha yakuwemo: "+ticket.getOutDate()));
             }
             
-            if(!ticketManager.setTicketOutDate(true, request.getInput())){
+            if(!ticketManager.setTicketOutDate(true, request.getInput(), request.getMsisdn())){
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarOut action failed due to: numberPlate "+request.getInput()+" not found");
                 return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Ibyo mushaka ntibibonetse.^Mwongere mukanya."));
             }
@@ -241,10 +246,10 @@ public class UssdProcessor {
             }
             
             request.setInput(request.getInput().replace(" ", "").toUpperCase());
-            if(! DataFactory.numberPlateValidator(request.getInput())){
-                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
-                return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza."));
-            }
+//            if(! DataFactory.numberPlateValidator(request.getInput())){
+//                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
+//                return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza."));
+//            }
             Ticket ticket = ticketFacade.getCustormerLastTicket(request.getInput());
             if(ticket == null){
                 out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a car with "+request.getInput()+" with no ticket: by conductor: "+request.getMsisdn());
@@ -293,10 +298,10 @@ public class UssdProcessor {
             if(!validateEntry(userBean)){
                 out.print(AppDesc.APP_DESC+"UssdProcessor signupCar no conductor found for: "+request.getMsisdn());
                 request.setInput(request.getInput().replace(" ", "").toUpperCase());
-                if(! DataFactory.numberPlateValidator(request.getInput())){
-                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
-                    return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza, Typo Error."));
-                }
+//                if(! DataFactory.numberPlateValidator(request.getInput())){
+//                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
+//                    return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza, Typo Error."));
+//                }
                 car = new Car(request.getInput().toUpperCase(), request.getMsisdn(), "Owner", new Date());
                 carFacade.create(car);
                 carFacade.refreshCar();
@@ -308,10 +313,10 @@ public class UssdProcessor {
             String[] data = DataFactory.splitString(request.getInput(), " ");
             String numberPlate = data[0].toUpperCase();
             String tel = data[1];
-            if(! DataFactory.numberPlateValidator(numberPlate)){
-                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
-                return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza, Typo Error."));
-            }
+//            if(! DataFactory.numberPlateValidator(numberPlate)){
+//                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
+//                return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza, Typo Error."));
+//            }
             String tempTel = tel;
             tel = DataFactory.phoneFormat(tel);
             if(tel.isEmpty()){
@@ -386,7 +391,7 @@ public class UssdProcessor {
                         }
                     }
                     numberPlate = numberPlate == null ? "purake" : numberPlate;
-                    return ReturnConfig.isSuccess(continueInput(conductorNames+"^Hitamo ubwoko bwatike.^Imodoka: "+numberPlate+"^1. 100Rwf^2. 200Rwf^3. 400Rwf^4. 1000Rwf",request));
+                    return ReturnConfig.isSuccess(continueInput(conductorNames+"^Hitamo ubwoko bwatike.^Imodoka: "+numberPlate+"^1. 100Rwf^2. 200Rwf^3. 300Rwf^4. 400Rwf^5. 1000Rwf",request));
                 case 3:
                     sDatas = sessionDataFacade.getSessionData(sessionStatus.getSessionId());
                     if(sDatas == null){
@@ -422,9 +427,9 @@ public class UssdProcessor {
                 out.print(AppDesc.APP_DESC+"UssdProcessor processEntry requestor "+request.getMsisdn()+" Session count: "+sessionStatus.getStepsCount()+" Current Step: "+sessionStatus.getCurrentStep()+" Next Step: "+sessionStatus.getNextStep());
                 
                 request.setInput(request.getInput().replace(" ", "").toUpperCase());
-                if(! DataFactory.numberPlateValidator(request.getInput())){
-                    return ReturnConfig.isSuccess(carInOutMenu("Guparika^"+conductorNames+"^Plaque "+request.getInput()+" Ntiyemewe^",request));
-                }
+//                if(! DataFactory.numberPlateValidator(request.getInput())){
+//                    return ReturnConfig.isSuccess(carInOutMenu("Guparika^"+conductorNames+"^Plaque "+request.getInput()+" Ntiyemewe^",request));
+//                }
                 SessionData sessionData = new SessionData(sessionStatus.getSessionId(),
                         StepsConfig.ENTER_NUMBER_PLATE,
                         request.getInput(),
@@ -440,7 +445,7 @@ public class UssdProcessor {
                 updateSession(sessionStatus);
                 
                 reminder(sessionStatus);
-                return ReturnConfig.isSuccess(continueInput(conductorNames+"^Hitamo ubwoko bwatike.^Imodoka: "+request.getInput()+"^1. 100Rwf^2. 200Rwf^3. 400Rwf^4. 1000Rwf",request));
+                return ReturnConfig.isSuccess(continueInput(conductorNames+"^Hitamo ubwoko bwatike.^Imodoka: "+request.getInput()+"^1. 100Rwf^2. 200Rwf^3. 300Rwf^4. 400Rwf^5. 1000Rwf",request));
             }else if(sessionStatus.getCurrentStep().equals(StepsConfig.ENTER_NUMBER_PLATE) && sessionStatus.getStepsCount() == 2 && sessionStatus.getNextStep().equals(StepsConfig.ENTER_TICKET_TYPE)){
                 out.print(AppDesc.APP_DESC+"UssdProcessor processEntry requestor "+request.getMsisdn()+" Session count: "+sessionStatus.getStepsCount()+" Current Step: "+sessionStatus.getCurrentStep()+" Next Step: "+sessionStatus.getNextStep());
                 String ticketType;
@@ -452,13 +457,16 @@ public class UssdProcessor {
                         ticketType = "200";
                         break;
                     case "3":
-                        ticketType = "400";
+                        ticketType = "300";
                         break;
                     case "4":
+                        ticketType = "400";
+                        break;
+                    case "5":
                         ticketType = "1000";
                         break;
                     default:
-                        return ReturnConfig.isSuccess(continueInput(conductorNames+"^Mwahisemo ibitaribyo^Hitamo ubwoko bwatike.^Imodoka: "+sessionStatus.getCurrentInput()+"^1. 100Rwf^2. 200Rwf^3. 400Rwf^4. 1000Rwf",request));
+                        return ReturnConfig.isSuccess(continueInput(conductorNames+"^Mwahisemo ibitaribyo^Hitamo ubwoko bwatike.^Imodoka: "+sessionStatus.getCurrentInput()+"^1. 100Rwf^2. 200Rwf^3. 300Rwf^4. 400Rwf^5. 1000Rwf",request));
                 }
                 SessionData sessionData = new SessionData(sessionStatus.getSessionId(),
                         StepsConfig.ENTER_TICKET_TYPE,

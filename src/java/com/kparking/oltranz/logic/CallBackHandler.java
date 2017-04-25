@@ -78,10 +78,10 @@ public class CallBackHandler {
             return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Empty jobId in headers");
         }
         
-        CallBackCounter callBackCounter = callBackCounterFacade.getLastSession(jobId);
+        CallBackCounter callBackCounter = callBackCounterFacade.getLastJob(jobId);
         if(callBackCounter == null){
             out.print(AppDesc.APP_DESC+"CallBackHandler callBackreceiver received callbackCounter: "+jobId+" is being created due to empty result");
-            callBackCounter = new CallBackCounter(jobId, 1, new Date());
+            callBackCounter = new CallBackCounter(jobId, jobId, 1, new Date());
             callBackCounterFacade.create(callBackCounter);
             callBackCounterFacade.refreshCounter();
             out.print(AppDesc.APP_DESC+"CallBackHandler callBackreceiver created callback counter instance: "+jobId);
@@ -98,7 +98,7 @@ public class CallBackHandler {
         }else{
             out.print(AppDesc.APP_DESC+"CallBackHandler callBackreceiver callback counter has invalid data: "+callBackCounter.getCallbackCount());
             return ReturnConfig.isSuccess("Success");
-        }        
+        }
     }
     
     public Response progressCallBack(HttpHeaders headers){
@@ -109,23 +109,23 @@ public class CallBackHandler {
             }
             String jobId = headers.getHeaderString(HeaderConfig.JOB_ID);
             String status = headers.getHeaderString(HeaderConfig.JOB_STATUS);
-            
+
             if(jobId == null){
                 out.print(AppDesc.APP_DESC+"CallBackHandler progressCallBack received JobId: null with a status: "+status);
                 return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Empty headers");
             }
-            
+
             out.print(AppDesc.APP_DESC+"CallBackHandler progressCallBack received JobId: "+jobId+" with a status: "+status);
-            
+
             String sessionId = DataFactory.splitString(jobId, "^")[1];
             out.print(AppDesc.APP_DESC+"CallBackHandler progressCallBack sessionId: "+sessionId);
-            
+
             SessionStatus sessionStatus = sessionStatusFacade.getLastSession(sessionId);
             if(sessionStatus == null){
                 out.print(AppDesc.APP_DESC+"CallBackHandler progressCallBack did not find Progressive with ID: "+sessionId);
                 return ReturnConfig.isSuccess("Success");
             }
-            
+
             if(!sessionStatus.isCompleted() && sessionStatus.getCallbackCount() > 0){
                 out.print(AppDesc.APP_DESC+"CallBackHandler progressCallBack unfinished session  ID: "+sessionId);
                 List<SessionData> sessionDataList = sessionDataFacade.getSessionData(sessionId);
@@ -227,7 +227,7 @@ public class CallBackHandler {
             return ReturnConfig.isSuccess("Success");
         } catch (Exception e) {
             out.print(AppDesc.APP_DESC+"CallBackHandler tempTicket error occured due to: "+e.getMessage());
-            return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Empty headers");
+            return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Schedule initiator failed.");
         }
     }
     
@@ -247,16 +247,22 @@ public class CallBackHandler {
             
             out.print(AppDesc.APP_DESC+"CallBackHandler tNotification received JobId: "+jobId+" with a status: "+status);
             String sessionId = DataFactory.splitString(jobId, "^")[1];
-            CallBackCounter callBackCounter = callBackCounterFacade.getLastSession(jobId);
+            CallBackCounter callBackCounter = callBackCounterFacade.getLastJob(jobId);
             if(callBackCounter == null){
                 out.print(AppDesc.APP_DESC+"CallBackHandler tNotification received callbackCounter: "+jobId+" is being created due to empty result");
-                callBackCounter = new CallBackCounter(jobId, 1, new Date());
+                
+                callBackCounter = new CallBackCounter(jobId,sessionId, 1, new Date());
                 callBackCounterFacade.create(callBackCounter);
                 callBackCounterFacade.refreshCounter();
                 out.print(AppDesc.APP_DESC+"CallBackHandler tNotification created callback counter instance: "+jobId);
                 return ReturnConfig.isSuccess("Success");
             }
-            if(callBackCounter.getCallbackCount() == 1){
+            List<CallBackCounter> callBackCounters = callBackCounterFacade.getCallBackSessions(sessionId);
+            if(callBackCounters.isEmpty()){
+                out.print(AppDesc.APP_DESC+"CallBackHandler tNotification no session CallBack Found for sessionId: "+sessionId);
+                return ReturnConfig.isSuccess("Success");
+            }
+            if(callBackCounters.size() <= 4){
                 Ticket ticket = ticketFacade.getSessionLastTicket(sessionId);
                 if(ticket == null){
                     out.print(AppDesc.APP_DESC+"CallBackHandler tNotification did not find Ticket with sessionId: "+sessionId);

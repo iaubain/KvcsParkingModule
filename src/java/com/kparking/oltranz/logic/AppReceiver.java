@@ -22,6 +22,8 @@ public class AppReceiver {
             CallBackHandler callBackHandler;
     @EJB
             ParkingInfoExposed parkingInfoExposed;
+    @EJB
+            ReportGenerator reportGenerator;
     public Response clientCarIn(String sourceIp, int sourcePort, HttpHeaders headers, String body){
         return appProcessor.carInprocessor(headers, body);
     }
@@ -52,5 +54,8 @@ public class AppReceiver {
     
     public Response getParkInfo(String sourceIp, int sourcePort, HttpHeaders headers, String body){
         return parkingInfoExposed.receiver(headers);
+    }
+    public Response getReport(String sourceIp, int sourcePort, HttpHeaders headers, String body){
+        return reportGenerator.genReport(body);
     }
 }

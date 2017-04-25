@@ -13,6 +13,8 @@ import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import static java.lang.System.out;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -239,5 +241,19 @@ public class DataFactory {
     private static long elapsed(Date startDate, Date endDate) {
         long diffMills = endDate.getTime() - startDate.getTime();
         return (diffMills/1000)/60;
+    }
+    
+    public static long diffMinutes(Date startDate, Date endDate){
+        try {
+            SimpleDateFormat format = new SimpleDateFormat("yyy-MM-dd HH:mm:ss");
+            startDate = format.parse(format.format(startDate));
+            endDate = format.parse(format.format(endDate));
+            out.print(AppDesc.APP_DESC+" AppProcessor diffInHour calculating hour difference startDate: "+format.format(startDate)+" endDate: "+format.format(endDate));
+            long result = (endDate.getTime() - startDate.getTime())/ (60 * 1000);
+            return result;
+        } catch (ParseException e) {
+            out.print(AppDesc.APP_DESC+"AppProcessor diffInHour failed to generate report due to: "+e.getMessage());
+            return 1;
+        }
     }
 }

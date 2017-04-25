@@ -40,6 +40,8 @@ public class ParkingInfo implements Serializable {
     @Column(name="outDate", length = 30, nullable = true)
     @Temporal(javax.persistence.TemporalType.TIMESTAMP)
     private Date outDate;
+    @Column(name="outedBy", length = 30, nullable = true)
+    private String outedBy;
     @Column(name="msisdn", length = 30, nullable = false)
     private String msisdn;
     @Column(name="parkingSession", length = 30, nullable = false)
@@ -53,17 +55,17 @@ public class ParkingInfo implements Serializable {
     public ParkingInfo() {
     }
 
-    public ParkingInfo(String numberPlate, Date inDate, Date outDate, String msisdn, String parkingSession, String parkingId, Date createdOn) {
+    public ParkingInfo(String numberPlate, Date inDate, Date outDate, String outedBy, String msisdn, String parkingSession, String parkingId, Date createdOn) {
         this.numberPlate = numberPlate;
         this.inDate = inDate;
         this.outDate = outDate;
+        this.outedBy = outedBy;
         this.msisdn = msisdn;
         this.parkingSession = parkingSession;
         this.parkingId = parkingId;
         this.createdOn = createdOn;
     }
     
-
     public Long getId() {
         return id;
     }
@@ -151,6 +153,14 @@ public class ParkingInfo implements Serializable {
 
     public void setCreatedOn(Date createdOn) {
         this.createdOn = createdOn;
+    }
+
+    public String getOutedBy() {
+        return outedBy;
+    }
+
+    public void setOutedBy(String outedBy) {
+        this.outedBy = outedBy;
     }
     
 }

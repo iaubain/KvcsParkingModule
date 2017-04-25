@@ -48,7 +48,8 @@ public class BackgroundSMS  implements Runnable{
             }
         }else{
             try{
-                smsSender.send(customerProvider.genMsisdn(ticket.getNumberPlate(), ticket.getMsisdn()), message);
+                out.print(AppDesc.APP_DESC+"BackgroundSMS exec sending SMS failed due to: Sending SMS to customer disabled");
+                //smsSender.send(customerProvider.genMsisdn(ticket.getNumberPlate(), ticket.getMsisdn()), message);
             }catch(Exception e){
                 out.print(AppDesc.APP_DESC+"BackgroundSMS exec sending SMS failed due to: "+e.getMessage());
             }

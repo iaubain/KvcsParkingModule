@@ -40,6 +40,24 @@ public class CallBackCounterFacade extends AbstractFacade<CallBackCounter> {
     public void getLAstCallBack(String sessionId){
     }
     
+    public CallBackCounter getLastJob(String jobId){
+        try{
+            if(jobId.isEmpty())
+                return null;
+            Query q= em.createQuery("Select C from CallBackCounter C WHERE C.jobId = :jobId ORDER BY C.id DESC");
+            q.setParameter("jobId", jobId)
+                    .setMaxResults(1);
+            List<CallBackCounter> list = (List<CallBackCounter>)q.getResultList();
+            if(!list.isEmpty())
+                return list.get(0);
+            else
+                return null;
+        }catch(Exception ex){
+            out.print(AppDesc.APP_DESC+" SessionStatusFacade getLastSession failed due to: "+ex.getMessage());
+            return null;
+        }
+    }
+    
     public CallBackCounter getLastSession(String sessionId){
         try{
             if(sessionId.isEmpty())
@@ -52,6 +70,21 @@ public class CallBackCounterFacade extends AbstractFacade<CallBackCounter> {
                 return list.get(0);
             else
                 return null;
+        }catch(Exception ex){
+            out.print(AppDesc.APP_DESC+" SessionStatusFacade getLastSession failed due to: "+ex.getMessage());
+            return null;
+        }
+    }
+    
+    public List<CallBackCounter> getCallBackSessions(String sessionId){
+        try{
+            if(sessionId.isEmpty())
+                return null;
+            Query q= em.createQuery("Select C from CallBackCounter C WHERE C.sessionId = :sessionId ORDER BY C.id DESC");
+            q.setParameter("sessionId", sessionId);
+            List<CallBackCounter> list = (List<CallBackCounter>)q.getResultList();
+            
+            return list.isEmpty() ? null : list;
         }catch(Exception ex){
             out.print(AppDesc.APP_DESC+" SessionStatusFacade getLastSession failed due to: "+ex.getMessage());
             return null;

@@ -32,7 +32,9 @@ public class CallBackCounter implements Serializable {
             pkColumnValue="CBackC_PK")
     @GeneratedValue(strategy=GenerationType.TABLE, generator="CallBackCounterSeqGen")
     private Long id;
-    @Column(name="sessionId", nullable = false, unique = true)
+    @Column(name="jobId", nullable = false, length = 522, unique = true)
+    private String jobId;
+    @Column(name="sessionId", nullable = false, length = 522)
     private String sessionId;
     @Column(name="callbackCount", nullable = false)
     private int callbackCount;
@@ -42,8 +44,9 @@ public class CallBackCounter implements Serializable {
     
     public CallBackCounter() {
     }
-    
-    public CallBackCounter(String sessionId, int callbackCount, Date creationDate) {
+
+    public CallBackCounter(String jobId, String sessionId, int callbackCount, Date creationDate) {
+        this.jobId = jobId;
         this.sessionId = sessionId;
         this.callbackCount = callbackCount;
         this.creationDate = creationDate;
@@ -82,12 +85,12 @@ public class CallBackCounter implements Serializable {
         return "com.kparking.oltranz.entities.TicketNotify[ id=" + id + " ]";
     }
     
-    public String getSessionId() {
-        return sessionId;
+    public String getJobId() {
+        return jobId;
     }
     
-    public void setSessionId(String sessionId) {
-        this.sessionId = sessionId;
+    public void setJobId(String jobId) {
+        this.jobId = jobId;
     }
     
     public int getCallbackCount() {
@@ -104,6 +107,14 @@ public class CallBackCounter implements Serializable {
     
     public void setCreationDate(Date creationDate) {
         this.creationDate = creationDate;
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
     }
     
 }
