@@ -17,6 +17,8 @@ import com.kparking.oltranz.simplebeans.schedule.MyJob;
 import com.kparking.oltranz.simplebeans.sms.SmsSendResponse;
 import com.kparking.oltranz.simplebeans.ticketsreport.PublishTicketRequest;
 import com.kparking.oltranz.simplebeans.ticketsreport.PublishTicketResponse;
+import com.kparking.oltranz.simplebeans.validation.RequestValidation;
+import com.kparking.oltranz.simplebeans.validation.ResponseValidation;
 import com.kparking.oltranz.utilities.DataFactory;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -99,6 +101,15 @@ public class ApInterface {
         null, 
         MediaType.APPLICATION_JSON, 
         UserBean.class);
+    }
+    
+    public ResponseValidation validateNumberPlate(RequestValidation requestValidation){
+        headers = new MultivaluedHashMap<>();
+        headers.putSingle(HeaderConfig.CONTENT, MediaType.APPLICATION_JSON);
+        return (ResponseValidation) openExternal.doPost(ApiConfig.VALIDATE_NUMBER_PLATE,
+                headers,
+                DataFactory.objectToString(requestValidation),
+                MediaType.APPLICATION_JSON, ResponseValidation.class);
     }
     
     public PublishTicketResponse publishTicket(PublishTicketRequest publishTicketRequest){

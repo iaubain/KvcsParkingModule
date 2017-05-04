@@ -211,7 +211,10 @@ public class DataFactory {
         String regexRDF = "^RDF[0-9]{3}[A-Z]$";
         String regexGov = "^GOV[0-9]{3}[A-Z]{2}$";
         String regexGr = "^GR[0-9]{3}[A-Z]{1}$";
+        
         String regexIT = "^IT[0-9]{3}[A-Z]{2}$";
+        String regexIT1 = "^IT[0-9]{3}[A-Z]$";
+        
         String regexRDC = "^CGO[0-9]{4}[A-B]{2}[0-9]{2}$";
         String regexDRC1 = "^[0-9]{3}[A-Z]{1}[0-9]{3}$";
         String otherNPlate = "^[0-9][A-Z]{2}[0-9]{3}[A-Z]$";
@@ -224,18 +227,24 @@ public class DataFactory {
         String regexTz6 = "^T[0-9]{4}[A-Z]{3}$";
         
         String regexUn = "^UN[0-9]{3}[A-Z]{2}$";
+        
         String regexBurundi = "^[A-Z][0-9]{4}$";
         String regexBurundi1 = "^[A-Z][0-9]{4}[A-Z]$";
+        
         String regexUg = "^U[A-Z][0-9]{3}[A-Z]$";
+        String regexUg1 = "^U[A-Z]{2}[0-9]{3}[A-Z]$";
+        
         String regexKenya = "^K[A-Z][A-Z][0-9]{3}[A-Z]$";
         
         String regexMoto = "^R[A-Z][0-9]{3}[A-Z]$";
         String totalRegx = regexRwanda+"|"+
                 regexBurundi+"|"+
                 regexUg+"|"+
+                regexUg1+"|"+
                 regexRDC+"|"+
                 regexMoto+"|"+
                 regexIT+"|"+
+                regexIT1+"|"+
                 regexRDF+"|"+
                 regexGov+"|"+
                 regexKenya+"|"+

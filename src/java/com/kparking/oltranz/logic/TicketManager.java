@@ -88,13 +88,16 @@ public class TicketManager {
     
     public String genTicket(SessionStatus sessionStatus, UserBean userBean, SessionTicketData sessionTicketData){
         try {
+            DateFormat dFomat = new SimpleDateFormat("yyy-MM-dd HH:mm:ss");
             Date date = new Date();
             String conductorNames = userBean.getfName() != null ? userBean.getfName() : "" +userBean.getOtherNames() != null ? userBean.getOtherNames() : "";
             
             ParkingInfo parkingInfo = parkingInfoFacade.getCustomerLastParkiInfo(sessionTicketData.getnPlate());
             if(parkingInfo != null){
                 if(parkingInfo.getOutDate() == null){
-                    parkingInfo.setOutDate(date);
+                    parkingInfo.setOutedBy(sessionStatus.getInitTel());
+                    parkingInfo.setOutedBy(conductorNames);
+                    parkingInfo.setOutDate(dFomat.parse(dFomat.format(date)));
                     parkingInfoFacade.edit(parkingInfo);
                     parkingInfoFacade.refreshParkInfo();
                 }
@@ -138,6 +141,7 @@ public class TicketManager {
                         smsThread.start();
                     }
                 }
+                
                 DateFormat formatter = new SimpleDateFormat("yyy-MM-dd");
                 
                 Calendar startCalendar = Calendar.getInstance();
@@ -178,7 +182,8 @@ public class TicketManager {
                         
                         reminder(sessionStatus, nextReminder, calendar.getTime());
                         //return "SUCCESS";
-                        return "Imodoka: "+ticket.getNumberPlate()+"^Yariparitse: "+ticket.getParkingDesc()+"^Irandikirwa nyuma: "+durationMinutes+"min"+"^Yashyizwemo: "+new SimpleDateFormat("yyy-MM-dd HH:mm:ss").format(ticket.getInDate());
+                        long nextTicket = 60 - durationMinutes;
+                        return "Imodoka: "+ticket.getNumberPlate()+"^Yariparitse: "+ticket.getParkingDesc()+"^Isigaje iminota: "+nextTicket+"^Yashyizwemo: "+new SimpleDateFormat("yyy-MM-dd HH:mm:ss").format(ticket.getInDate());
                     }
             }
             Calendar calendar = Calendar.getInstance();
@@ -315,6 +320,7 @@ public class TicketManager {
     
     public boolean setTicketOutDate(boolean isCancelSched, String numberPlate, String outerMsisdn){
         try{
+            DateFormat dFomat = new SimpleDateFormat("yyy-MM-dd HH:mm:ss");
             Date date = new Date();
             TempTicket tempTicket = tempTicketFacade.getLastCustomerTempTicket(numberPlate);
             if(tempTicket != null){
@@ -327,7 +333,7 @@ public class TicketManager {
             ParkingInfo parkingInfo = parkingInfoFacade.getCustomerLastParkiInfo(numberPlate);
             if(parkingInfo != null){
                 if(parkingInfo.getOutDate() == null){
-                    parkingInfo.setOutDate(new Date());
+                    parkingInfo.setOutDate(dFomat.parse(dFomat.format(date)));
                     parkingInfo.setOutedBy(outerMsisdn);
                     parkingInfoFacade.edit(parkingInfo);
                     parkingInfoFacade.refreshParkInfo();
@@ -365,10 +371,10 @@ public class TicketManager {
             mJob.setJobId(oTicket.getSessionId());
             cancelSchedule(mJob);
             
-//            mJob = new MyJob();
-//            mJob.setJobId(oTicket.getSessionId());
-//            cancelSchedule(mJob);
-return true;
+            //            mJob = new MyJob();
+            //            mJob.setJobId(oTicket.getSessionId());
+            //            cancelSchedule(mJob);
+            return true;
         }catch(Exception e){
             out.print(AppDesc.APP_DESC+"TicketManager setTicketOutDate Failed to generate ticket due to:" +e.getLocalizedMessage());
             return false;

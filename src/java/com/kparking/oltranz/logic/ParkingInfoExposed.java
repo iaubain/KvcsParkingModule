@@ -45,31 +45,31 @@ public class ParkingInfoExposed {
     */
     
     public Response receiver(HttpHeaders headers){
-//        String what;
-
-if(headers.getHeaderString("MSISDN") != null){
-    return parkInfoByMsisdn(headers.getHeaderString("MSISDN"));
-}
-if(headers.getHeaderString("N_PLATE") != null){
-    return parkInfoByNmberPlate(headers.getHeaderString("N_PLATE"));
-}
-if(headers.getHeaderString("PARK_SES") != null){
-    return parkInfoBySession(headers.getHeaderString("PARK_SES"));
-}
-//        if(headers.getHeaderString("CMD") != null){
-//            what = headers.getHeaderString("CMD");
-//            switch(what){
-//                case "MSISDN":
-//                    return parkInfoByMsisdn(headers.getHeaderString("MSISDN"));
-//                case "N_PLATE":
-//                    return parkInfoByNmberPlate(headers.getHeaderString("N_PLATE"));
-//                case "PARK_SES":
-//                    return parkInfoBySession(headers.getHeaderString("PARK_SES"));
-//                default:
-//                    return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Invalid command.");
-//            }
-//        }
-return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Try again, something went wrong");
+        //        String what;
+        
+        if(headers.getHeaderString("MSISDN") != null){
+            return parkInfoByMsisdn(headers.getHeaderString("MSISDN"));
+        }
+        if(headers.getHeaderString("N_PLATE") != null){
+            return parkInfoByNmberPlate(headers.getHeaderString("N_PLATE"));
+        }
+        if(headers.getHeaderString("PARK_SES") != null){
+            return parkInfoBySession(headers.getHeaderString("PARK_SES"));
+        }
+        //        if(headers.getHeaderString("CMD") != null){
+        //            what = headers.getHeaderString("CMD");
+        //            switch(what){
+        //                case "MSISDN":
+        //                    return parkInfoByMsisdn(headers.getHeaderString("MSISDN"));
+        //                case "N_PLATE":
+        //                    return parkInfoByNmberPlate(headers.getHeaderString("N_PLATE"));
+        //                case "PARK_SES":
+        //                    return parkInfoBySession(headers.getHeaderString("PARK_SES"));
+        //                default:
+        //                    return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Invalid command.");
+        //            }
+        //        }
+        return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Try again, something went wrong");
     }
     private Response parkInfoByMsisdn(String msisdn){
         List<ParkingInfo> parkingInfos = parkingInfoFacade.getConductorParkInfo(msisdn);

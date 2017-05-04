@@ -19,7 +19,7 @@ public class ApiConfig {
     
     public static final int SMS_CONTRACT = 15603452;
     public static final String SMS_SIGNATURE = "648eb83555bab00b3f732e19ce65126f";
-    public static final String SMS_URL = "http://localhost:8080/SMSServiceProvider/sendSMS";
+    public static final String SMS_URL = "http://10.171.1.50:8080/SMSServiceProvider/sendSMS";
     
     public static final String CALLBACK_URL = "http://localhost:8080/Kparking/system/schedCallBack";
     public static final String PROGRESS_CALLBACK_URL = "http://localhost:8080/Kparking/system/progressCallBack";
@@ -31,5 +31,7 @@ public class ApiConfig {
     
     public static final String PUBLISH_TICKET_CMD = "001";
     public static final String PUBLISH_TICKET_DOMAIN = "kvcsServices";
-    public static final String PUBLISH_TICKET = "http://localhost:8080/RequestsDispatcher/RequestsHandler";
+    public static final String PUBLISH_TICKET = "http://10.171.1.50:8080/RequestsDispatcher/RequestsHandler";
+    
+     public static final String VALIDATE_NUMBER_PLATE = "http://localhost:8080/KVCSValidator/NumberPlateValdation";
 }

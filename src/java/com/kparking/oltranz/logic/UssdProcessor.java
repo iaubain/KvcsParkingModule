@@ -9,17 +9,17 @@ import com.kparking.oltranz.apiclient.ApInterface;
 import com.kparking.oltranz.apiclient.OpenExternal;
 import com.kparking.oltranz.config.ApiConfig;
 import com.kparking.oltranz.config.AppDesc;
-import com.kparking.oltranz.entities.CallBack;
 import com.kparking.oltranz.entities.Car;
+import com.kparking.oltranz.entities.ParkingInfo;
 import com.kparking.oltranz.entities.Progressive;
 import com.kparking.oltranz.entities.TempTicket;
 import com.kparking.oltranz.entities.Ticket;
 import com.kparking.oltranz.facades.CallBackFacade;
 import com.kparking.oltranz.facades.CarFacade;
+import com.kparking.oltranz.facades.ParkingInfoFacade;
 import com.kparking.oltranz.facades.ProgressiveFacade;
 import com.kparking.oltranz.facades.TempTicketFacade;
 import com.kparking.oltranz.facades.TicketFacade;
-import com.kparking.oltranz.simplebeans.commonbeans.ConductorBean;
 import com.kparking.oltranz.simplebeans.conductors.ResponseConductor;
 import com.kparking.oltranz.simplebeans.schedule.JobTasks;
 import com.kparking.oltranz.simplebeans.schedule.MyFrequency;
@@ -27,6 +27,8 @@ import com.kparking.oltranz.simplebeans.schedule.MyJob;
 import com.kparking.oltranz.simplebeans.ussdbeans.Menu;
 import com.kparking.oltranz.simplebeans.ussdbeans.UssdRequest;
 import com.kparking.oltranz.simplebeans.ussdbeans.UssdResponse;
+import com.kparking.oltranz.simplebeans.validation.RequestValidation;
+import com.kparking.oltranz.simplebeans.validation.ResponseValidation;
 import com.kparking.oltranz.utilities.DataFactory;
 import com.kparking.oltranz.utilities.IdGenerator;
 import com.kparking.oltranz.utilities.ReturnConfig;
@@ -89,6 +91,8 @@ public class UssdProcessor {
             SessionDataFacade sessionDataFacade;
     @EJB
             TempTicketFacade tempTicketFacade;
+    @EJB
+            ParkingInfoFacade parkingInfoFacade;
     
     
     public Response receiveCarInRequest(UssdRequest request){
@@ -110,6 +114,8 @@ public class UssdProcessor {
             }
             
             String conductorNames = userBean.getfName() != null ? userBean.getfName() : "" +userBean.getOtherNames() != null ? userBean.getOtherNames() : "";
+            String conductorLoc = userBean.getLocationName()+"-"+userBean.getAgentZoneName();
+            
             String msisdn = request.getMsisdn();
             
             if(userBean.getRoleId() != 4){
@@ -131,7 +137,8 @@ public class UssdProcessor {
                         sessionStatus.setLastAccessDate(new Date());
                         sessionStatus.setLastAction("RECOVER FROM UNCOMPLETED SESSION");
                         updateSession(sessionStatus);
-                        return ReturnConfig.isSuccess(continueInput(conductorNames+MenuMessage.RESUME_MENU, request));
+                        conductorNames += "^"+conductorLoc;
+                        return ReturnConfig.isSuccess(continueInput(conductorNames+" ("+userBean.getAgentZoneId() +")"+MenuMessage.RESUME_MENU, request));
                     }else{
                         //Last session completed and create new session
                         out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarInRequest last session: "+sessionStatus.getSessionId()+" completed generating nee session for: "+msisdn+" Names: "+conductorNames);
@@ -169,6 +176,8 @@ public class UssdProcessor {
     public Response receiveCarOut(UssdRequest request){
         try{
             //check user validity by MSISDN
+            DateFormat dFomat = new SimpleDateFormat("yyy-MM-dd HH:mm:ss");
+            Date date = new Date();
             UserBean userBean = getUser(request.getMsisdn());
             if(!validateEntry(userBean)){
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveCarInRequest no conductor found for: "+request.getMsisdn());
@@ -190,9 +199,9 @@ public class UssdProcessor {
             }
             
             request.setInput(request.getInput().replace(" ", "").toUpperCase());
-            if(! DataFactory.numberPlateValidator(request.getInput())){
+            if(request.getInput().isEmpty()){
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
-                return ReturnConfig.isSuccess(faillureGen(request, "Ikaze, "+conductorNames+"^Plaque: "+request.getInput()+" Reba niba yanditse neza."));
+                return ReturnConfig.isSuccess(faillureGen(request, "Ikaze, "+conductorNames+"^Reba niba purake yanditse neza."));
             }
             
             Ticket ticket = ticketFacade.getCustormerLastTicket(request.getInput());
@@ -203,14 +212,26 @@ public class UssdProcessor {
             }
             
             /*
-            Uncoment this if the one that put the car in prking is the one that must remove it.
+            (Un)Coment this if the one that put the car in prking is (not) the one that must remove it.
             */
-            /*
+            
+            String carOutDate = null;
+            ParkingInfo parkingInfo = parkingInfoFacade.getCustomerLastParkiInfo(request.getInput());
+            if(parkingInfo != null && parkingInfo.getOutDate() != null){
+                carOutDate = dFomat.format(parkingInfo.getOutDate());                
+            }
+            
+            if(carOutDate == null){
+                if(ticket.getOutDate().getTime() < date.getTime())
+                    carOutDate = dFomat.format(ticket.getOutDate());
+                else
+                    carOutDate = "Mu minota "+DataFactory.diffMinutes(date, ticket.getOutDate()) +" Itambutse";
+            }
             if(!ticket.getMsisdn().equals(request.getMsisdn())){
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+request.getInput()+" with ticket: "+ticket.getTicketId()+" request by conductor: "+request.getMsisdn()+" Initiated by: "+ticket.getConductorId());
-                return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Imodoka. "+request.getInput()+"^Yashyizwe muri parking na: "+ticket.getConductorName()+"^Saa: "+ticket.getOutDate()+"^Kuri: "+ticket.getParkingDesc()));
+                return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Imodoka. "+request.getInput()+"^Yashyizwe muri parking na: "+ticket.getConductorName()+"^Saa: "+dFomat.format(ticket.getInDate())+"^Kuri: "+ticket.getParkingDesc()));
             }
-            */
+            
             
             TempTicket tempTicket = tempTicketFacade.getLastCustomerTempTicket(request.getInput());
             if(tempTicket != null && tempTicket.getTicketStatus().equals(SessionDataStatus.ONGOING_STATUS)){
@@ -221,7 +242,7 @@ public class UssdProcessor {
             
             if(ticket.getTicketStatus().equals(SessionDataStatus.COMPLETED_STATUS)){
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+request.getInput()+" with ticket: "+ticket.getTicketId()+" by conductor: "+request.getMsisdn());
-                return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Imodoka. "+request.getInput()+"^Yamaze gukurwa muri parikingi.^Isaha yakuwemo: "+ticket.getOutDate()));
+                return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Imodoka. "+request.getInput()+"^Yamaze gukurwa muri parikingi.^Isaha yakuwemo: "+carOutDate));
             }
             
             if(!ticketManager.setTicketOutDate(true, request.getInput(), request.getMsisdn())){
@@ -246,9 +267,18 @@ public class UssdProcessor {
             }
             
             request.setInput(request.getInput().replace(" ", "").toUpperCase());
-            if(! DataFactory.numberPlateValidator(request.getInput())){
+            //ResponseValidation responseValidation = apInterface.validateNumberPlate(new RequestValidation(request.getInput(), "USSD-PARKIN"));
+            //if(responseValidation == null){
+            //  out.print(AppDesc.APP_DESC+"Failed to validate number plate: "+request.getInput());
+            //return ReturnConfig.isSuccess(carInOutMenu("^Plaque "+request.getInput()+"^Ntibikunze kumenya niba yemewe^Mwongere mukanya",request));
+            //}
+            //if(!responseValidation.getStatusCode().equals("100")){
+            //  out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
+            //return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza."));
+            //}
+            if(request.getInput().isEmpty()){
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
-                return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza."));
+                return ReturnConfig.isSuccess(faillureGen(request, "Purake reba niba yanditse neza."));
             }
             Ticket ticket = ticketFacade.getCustormerLastTicket(request.getInput());
             if(ticket == null){
@@ -257,21 +287,26 @@ public class UssdProcessor {
             }
             
             String message;
-            String lastTime = null;
-            CallBack callBack = callBackFacade.getCustormerLastCallback(request.getInput());
-            if(callBack != null){
-                DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd HH:mm:ss");
-                lastTime = dateFormat.format(callBack.getCreatedOn());
-                out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a car with "+request.getInput()+" last date: "+lastTime+" Requestor: "+request.getMsisdn());
-                
-            }
-            lastTime = lastTime != null?lastTime:"^igihe : ntikibonetse";
+            String lastTime = ticket.getInDate() != null ? new SimpleDateFormat("").format(ticket.getInDate()):"^igihe : ntikibonetse";
             if(ticket.getTicketStatus().equals(SessionDataStatus.ONGOING_STATUS)){
                 message = "Imodoka:"+ticket.getNumberPlate()+"^Iparitse:"+ticket.getParkingDesc()+"^Yagiyemo"+lastTime+"^Yashyizwemo:"+ticket.getConductorName();
                 out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a car with "+request.getInput()+" last date: "+lastTime != null?lastTime:""+" Requestor: "+request.getMsisdn()+" message: "+message);
             }else{
-                message = "Imodoka:"+ticket.getNumberPlate()+"^Yavuye muri parikingi:"+ticket.getParkingDesc()+"^Yagiyemo:"+lastTime+"^Yashyizwemo:"+ticket.getConductorName();
-                out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a car with "+request.getInput()+" last date: "+lastTime+" Requestor: "+request.getMsisdn()+" message: "+message);
+                TempTicket tempTicket = tempTicketFacade.getLastCustomerTempTicket(request.getInput());
+                if(tempTicket != null){
+                    if(tempTicket.getTicketStatus().equals(SessionDataStatus.ONGOING_STATUS)){
+                        lastTime = tempTicket.getCreated()!= null ? new SimpleDateFormat("").format(tempTicket.getCreated()):"^igihe : ntikibonetse";
+                        message = "Imodoka:"+tempTicket.getNumberPlate()+"^Iparitse:"+tempTicket.getParkingDesc()+"^Yagiyemo"+lastTime+"^Yashyizwemo:"+tempTicket.getConductorName();
+                        out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a car with "+request.getInput()+" last date: "+lastTime != null?lastTime:""+" Requestor: "+request.getMsisdn()+" message: "+message);
+                    }else{
+                        message = "Imodoka:"+ticket.getNumberPlate()+"^Yavuye muri parikingi:"+ticket.getParkingDesc()+"^Yagiyemo:"+lastTime+"^Yashyizwemo:"+ticket.getConductorName();
+                        out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a car with "+request.getInput()+" last date: "+lastTime+" Requestor: "+request.getMsisdn()+" message: "+message);
+                    }
+                }else{
+                    message = "Imodoka:"+ticket.getNumberPlate()+"^Yavuye muri parikingi:"+ticket.getParkingDesc()+"^Yagiyemo:"+lastTime+"^Yashyizwemo:"+ticket.getConductorName();
+                    out.print(AppDesc.APP_DESC+"UssdProcessor checkCar a car with "+request.getInput()+" last date: "+lastTime+" Requestor: "+request.getMsisdn()+" message: "+message);
+                }
+                
             }
             
             out.print(AppDesc.APP_DESC+"UssdProcessor checkCar Succeeded to check car: "+request.getInput()+" by requestor: "+request.getMsisdn());
@@ -288,51 +323,61 @@ public class UssdProcessor {
                 //check the session for possible list of parking in there
                 out.print(AppDesc.APP_DESC+"UssdProcessor signupCar a new request received from"+request.getMsisdn());
                 
-                return ReturnConfig.isSuccess(carInOutMenu("Andikisha imodoka.^Signup Car.^Enregistre l'auto.^Shyiramo puraki, Fill number plate, Entre la plaque.",request));
+                return ReturnConfig.isSuccess(carInOutMenu("Andikisha imodoka. Shyiramo purake^Signup Car. Fill the number plate.",request));
             }
-            ResponseConductor responseConductor = getConductor(request.getMsisdn());
+            
             Car car;
             //check user validity by MSISDN
-            UserBean userBean = getUser(request.getMsisdn());
             
-            if(!validateEntry(userBean)){
-                out.print(AppDesc.APP_DESC+"UssdProcessor signupCar no conductor found for: "+request.getMsisdn());
-                request.setInput(request.getInput().replace(" ", "").toUpperCase());
-                if(! DataFactory.numberPlateValidator(request.getInput())){
-                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
-                    return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza, Typo Error."));
-                }
-                car = new Car(request.getInput().toUpperCase(), request.getMsisdn(), "Owner", new Date());
-                carFacade.create(car);
-                carFacade.refreshCar();
-                return ReturnConfig.isSuccess(successGen(request, "Birakozwe, Well Done, Bien fait!"));
-            }
-            ConductorBean conductorBean = responseConductor.getConductor();
-            String conductorNames = conductorBean.getFirstName() != null?conductorBean.getFirstName():"" +conductorBean.getMiddleName()!= null?conductorBean.getMiddleName():"" + conductorBean.getLastName()!= null?conductorBean.getLastName():"";
+            out.print(AppDesc.APP_DESC+"UssdProcessor signupCar no conductor found for: "+request.getMsisdn());
+            request.setInput(request.getInput().replace(" ", "").toUpperCase());
             
-            String[] data = DataFactory.splitString(request.getInput(), " ");
-            String numberPlate = data[0].toUpperCase();
-            String tel = data[1];
-            if(! DataFactory.numberPlateValidator(numberPlate)){
+            ResponseValidation responseValidation = apInterface.validateNumberPlate(new RequestValidation(request.getInput(), "USSD-PARKIN"));
+            if(responseValidation == null){
+                out.print(AppDesc.APP_DESC+"Failed to validate number plate: "+request.getInput());
+                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
+                return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza, Typo Error."));
+            }if(!responseValidation.getStatusCode().equals("100")){
+                out.print(AppDesc.APP_DESC+"Condition applied to number plate: "+request.getInput()+" Status: "+responseValidation.getStatusCode()+" Message: "+responseValidation.getMessage());
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
                 return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza, Typo Error."));
             }
-            String tempTel = tel;
-            tel = DataFactory.phoneFormat(tel);
-            if(tel.isEmpty()){
-                out.print(AppDesc.APP_DESC+"UssdProcessor signupCar action failed due to: Empty tel requestor: "+request.getMsisdn());
-                return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Reba niba"+tempTel != null? tempTel:""+" numero yumukiriya wayanditse neza."));
-                
-            }
-            car = new Car(numberPlate,
-                    tel,
-                    "Conductor:ID"+responseConductor.getConductor().getConductorId()+" Names:"+conductorNames,
-                    new Date());
-            carFacade.create(car);
-            carFacade.refreshCar();
             
-            out.print(AppDesc.APP_DESC+"UssdProcessor signupCar Succeeded to signup car: "+request.getInput()+" by requestor: "+request.getMsisdn());
-            return ReturnConfig.isSuccess(successGen(request, conductorNames+"^Kwandika imodoka birakozwe"));
+//                if(! DataFactory.numberPlateValidator(request.getInput())){
+//                    out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
+//                    return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza, Typo Error."));
+//                }
+car = new Car(request.getInput().toUpperCase(), request.getMsisdn(), "Owner", new Date());
+carFacade.create(car);
+carFacade.refreshCar();
+return ReturnConfig.isSuccess(successGen(request, "Birakozwe, Well Done, Bien fait!"));
+
+//            ConductorBean conductorBean = responseConductor.getConductor();
+//            String conductorNames = conductorBean.getFirstName() != null?conductorBean.getFirstName():"" +conductorBean.getMiddleName()!= null?conductorBean.getMiddleName():"" + conductorBean.getLastName()!= null?conductorBean.getLastName():"";
+//
+//            String[] data = DataFactory.splitString(request.getInput(), " ");
+//            String numberPlate = data[0].toUpperCase();
+//            String tel = data[1];
+//            if(! DataFactory.numberPlateValidator(numberPlate)){
+//                out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest from: "+request.getMsisdn() +" and Input: "+request.getInput());
+//                return ReturnConfig.isSuccess(faillureGen(request, "Plaque: "+request.getInput()+" Reba niba yanditse neza, Typo Error."));
+//            }
+//            String tempTel = tel;
+//            tel = DataFactory.phoneFormat(tel);
+//            if(tel.isEmpty()){
+//                out.print(AppDesc.APP_DESC+"UssdProcessor signupCar action failed due to: Empty tel requestor: "+request.getMsisdn());
+//                return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Reba niba"+tempTel != null? tempTel:""+" numero yumukiriya wayanditse neza."));
+//
+//            }
+//            car = new Car(numberPlate,
+//                    tel,
+//                    "Conductor:ID"+responseConductor.getConductor().getConductorId()+" Names:"+conductorNames,
+//                    new Date());
+//            carFacade.create(car);
+//            carFacade.refreshCar();
+//
+//            out.print(AppDesc.APP_DESC+"UssdProcessor signupCar Succeeded to signup car: "+request.getInput()+" by requestor: "+request.getMsisdn());
+//            return ReturnConfig.isSuccess(successGen(request, conductorNames+"^Kwandika imodoka birakozwe"));
         }catch(Exception e){
             out.print(AppDesc.APP_DESC+"UssdProcessor signupCar action failed due to: "+e.getMessage());
             return ReturnConfig.isSuccess(faillureGen(request, "KVCS PARKING SYSTEM^Ibyo mushaka ntibibonetse.^Mwongere mukanya."));
@@ -369,10 +414,12 @@ public class UssdProcessor {
     
     private Response processEntry(SessionStatus sessionStatus, UserBean userBean, UssdRequest request, String conductorNames, boolean isResume){
         Date date = new Date();
+        String conductorLoc = userBean.getLocationName()+"-"+userBean.getAgentZoneName();
         if(isResume){
             switch(sessionStatus.getStepsCount()){
                 case 1:
-                    return ReturnConfig.isSuccess(carInOutMenu("Guparika^"+conductorNames+" ",request));
+                    conductorNames += "^"+conductorLoc;
+                    return ReturnConfig.isSuccess(carInOutMenu("Guparika^"+conductorNames+" ("+userBean.getAgentZoneId() +") ",request));
                 case 2:
                     List<SessionData> sDatas = sessionDataFacade.getSessionData(sessionStatus.getSessionId());
                     if(sDatas == null){
@@ -381,7 +428,8 @@ public class UssdProcessor {
                         sessionStatus.setLastAction("CANCELLING SESSION DUE TO MISSING SESSION DATA");
                         sessionStatus.setSessionType(SessionDataStatus.CANCELLED_STATUS);
                         updateSession(sessionStatus);
-                        return ReturnConfig.isSuccess(faillureGen(request, conductorNames+"^Ibyo mushaka ntibibonetse.^Mwongere mukanya."));
+                        conductorNames += "^"+conductorLoc;
+                        return ReturnConfig.isSuccess(faillureGen(request, conductorNames+" ("+userBean.getAgentZoneId() +")^Ibyo mushaka ntibibonetse.^Mwongere mukanya."));
                     }
                     String numberPlate = null;
                     for(SessionData sData : sDatas){
@@ -422,14 +470,32 @@ public class UssdProcessor {
                 sessionStatus.setLastAccessDate(date);
                 sessionStatus.setLastAction("REQUESTING NUMBER PLATE CAPTURE");
                 updateSession(sessionStatus);
-                return ReturnConfig.isSuccess(carInOutMenu("Guparika^"+conductorNames+" ",request));
+                conductorNames += "^"+conductorLoc;
+                return ReturnConfig.isSuccess(carInOutMenu("Guparika^"+conductorNames+" ("+userBean.getAgentZoneId() +") ",request));
             }else if(sessionStatus.getCurrentStep().equals(StepsConfig.WLCM) && sessionStatus.getStepsCount() == 1 && sessionStatus.getNextStep().equals(StepsConfig.ENTER_NUMBER_PLATE)){
                 out.print(AppDesc.APP_DESC+"UssdProcessor processEntry requestor "+request.getMsisdn()+" Session count: "+sessionStatus.getStepsCount()+" Current Step: "+sessionStatus.getCurrentStep()+" Next Step: "+sessionStatus.getNextStep());
                 
                 request.setInput(request.getInput().replace(" ", "").toUpperCase());
-                if(! DataFactory.numberPlateValidator(request.getInput())){
-                    return ReturnConfig.isSuccess(carInOutMenu("Guparika^"+conductorNames+"^Plaque "+request.getInput()+" Ntiyemewe^",request));
+                
+                ResponseValidation responseValidation = apInterface.validateNumberPlate(new RequestValidation(request.getInput(), "USSD-PARKIN"));
+                if(responseValidation == null){
+                    out.print(AppDesc.APP_DESC+"Failed to validate number plate: "+request.getInput());
+                    conductorNames += "^"+conductorLoc;
+                    return ReturnConfig.isSuccess(carInOutMenu("Guparika^"+conductorNames+" ("+userBean.getAgentZoneId() +")^Plaque "+request.getInput()+" Ntibikunze kumenya niba yemewe^Mwongere mukanya",request));
                 }
+                if(responseValidation.getStatusCode().equals("102")){
+                    out.print(AppDesc.APP_DESC+"Condition applied to number plate: "+request.getInput()+" Status: "+responseValidation.getStatusCode()+" Message: "+responseValidation.getMessage());
+                    return ReturnConfig.isSuccess(carInOutMenu("Guparika^"+conductorNames+"^Plaque "+request.getInput()+" ^"+responseValidation.getMessage(),request));
+                }else if(responseValidation.getStatusCode().equals("101")){
+                    out.print(AppDesc.APP_DESC+"Condition applied to number plate: "+request.getInput()+" Status: "+responseValidation.getStatusCode()+" Message: "+responseValidation.getMessage());
+                    return ReturnConfig.isSuccess(carInOutMenu("Guparika^"+conductorNames+"^Plaque "+request.getInput()+" Ntiyemewe^",request));
+                }else if(!responseValidation.getStatusCode().equals("100")){
+                    out.print(AppDesc.APP_DESC+"Condition applied to number plate: "+request.getInput()+" Status: "+responseValidation.getStatusCode()+" Message: "+responseValidation.getMessage());
+                    return ReturnConfig.isSuccess(carInOutMenu("Guparika^"+conductorNames+"^Plaque "+request.getInput()+" ^"+responseValidation.getMessage(),request));
+                }
+                //if(! DataFactory.numberPlateValidator(request.getInput())){
+                //  return ReturnConfig.isSuccess(carInOutMenu("Guparika^"+conductorNames+"^Plaque "+request.getInput()+" Ntiyemewe^",request));
+                //}
                 SessionData sessionData = new SessionData(sessionStatus.getSessionId(),
                         StepsConfig.ENTER_NUMBER_PLATE,
                         request.getInput(),

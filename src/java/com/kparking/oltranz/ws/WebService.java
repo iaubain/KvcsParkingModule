@@ -7,6 +7,7 @@ package com.kparking.oltranz.ws;
 
 import com.kparking.oltranz.config.AppDesc;
 import com.kparking.oltranz.logic.AppReceiver;
+import com.kparking.oltranz.logic.DependencyProcessor;
 import static java.lang.System.out;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -27,6 +28,8 @@ import javax.ws.rs.core.Response;
 public class WebService {
     @EJB
             AppReceiver appReceiver;
+    @EJB
+            DependencyProcessor dependencyProcessor;
     @POST
     @Path("/ussdCarIn")
     public Response ussdCarIn(@Context HttpServletRequest requestContext, @Context HttpHeaders headers, String body){
@@ -113,5 +116,21 @@ public class WebService {
         out.print(AppDesc.APP_DESC+" Source IP: " + requestContext.getRemoteAddr() + ", Port: " + requestContext.getRemotePort() + ", Host: " + requestContext.getRemoteHost());
         out.print(AppDesc.APP_DESC+" Node Received Headers "+headers.toString()+" and Body  "+body);
         return appReceiver.signupCar(requestContext.getRemoteAddr(), requestContext.getRemotePort(), headers, body);//.clientReceiver(headers, body);
+    }
+    
+    @POST
+    @Path("/stateLink")
+    public Response stateLink(@Context HttpServletRequest requestContext, @Context HttpHeaders headers, String body){
+        out.print(AppDesc.APP_DESC+" Source IP: " + requestContext.getRemoteAddr() + ", Port: " + requestContext.getRemotePort() + ", Host: " + requestContext.getRemoteHost());
+        out.print(AppDesc.APP_DESC+" Node Received Headers "+headers.toString()+" and Body  "+body);
+        return dependencyProcessor.createLinkState(body);//.clientReceiver(headers, body);
+    }
+    
+    @POST
+    @Path("/getDependecy")
+    public Response getDependecy(@Context HttpServletRequest requestContext, @Context HttpHeaders headers, String body){
+        out.print(AppDesc.APP_DESC+" Source IP: " + requestContext.getRemoteAddr() + ", Port: " + requestContext.getRemotePort() + ", Host: " + requestContext.getRemoteHost());
+        out.print(AppDesc.APP_DESC+" Node Received Headers "+headers.toString()+" and Body  "+body);
+        return dependencyProcessor.getDepencyStatus(body);//.clientReceiver(headers, body);
     }
 }
