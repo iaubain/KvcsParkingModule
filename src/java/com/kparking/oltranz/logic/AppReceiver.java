@@ -49,7 +49,15 @@ public class AppReceiver {
         return callBackHandler.tNotification(headers);
     }
     public Response getAllTickets(String sourceIp, int sourcePort, HttpHeaders headers, String body){
-        return appProcessor.getAllTickets();
+        return appProcessor.getAllTickets(body);
+    }
+    
+    public Response verifyCar(String sourceIp, int sourcePort, HttpHeaders headers, String body){
+        return appProcessor.verifyCar(body);
+    }
+    
+    public Response verifyCarReport(String sourceIp, int sourcePort, HttpHeaders headers, String body){
+        return appProcessor.verifyCarReport(body);
     }
     
     public Response getParkInfo(String sourceIp, int sourcePort, HttpHeaders headers, String body){

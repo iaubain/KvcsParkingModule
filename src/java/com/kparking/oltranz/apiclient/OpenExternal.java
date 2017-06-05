@@ -136,8 +136,10 @@ public class OpenExternal {
                     responseStatus == 200 ? "Success" : requestBody,
                     responseStatus);
             
-            dependencyStatusFacade.create(dependencyStatus);
-            dependencyStatusFacade.refreshDependency();
+            if(responseStatus != 200){
+                dependencyStatusFacade.create(dependencyStatus);
+                dependencyStatusFacade.refreshDependency();
+            }
             
             if(statusList.isEmpty()){
                 out.print(AppDesc.APP_DESC+"no notification state found: "+ url+" response status: "+responseStatus);

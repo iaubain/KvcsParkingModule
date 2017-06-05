@@ -7,6 +7,7 @@ package com.kparking.oltranz.logic;
 
 import com.kparking.oltranz.apiclient.ApInterface;
 import com.kparking.oltranz.apiclient.OpenExternal;
+import com.kparking.oltranz.config.ActionConfig;
 import com.kparking.oltranz.config.ApiConfig;
 import com.kparking.oltranz.config.AppDesc;
 import com.kparking.oltranz.config.SMSConfig;
@@ -92,28 +93,12 @@ public class TicketManager {
             Date date = new Date();
             String conductorNames = userBean.getfName() != null ? userBean.getfName() : "" +userBean.getOtherNames() != null ? userBean.getOtherNames() : "";
             
-            ParkingInfo parkingInfo = parkingInfoFacade.getCustomerLastParkiInfo(sessionTicketData.getnPlate());
-            if(parkingInfo != null){
-                if(parkingInfo.getOutDate() == null){
-                    parkingInfo.setOutedBy(sessionStatus.getInitTel());
-                    parkingInfo.setOutedBy(conductorNames);
-                    parkingInfo.setOutDate(dFomat.parse(dFomat.format(date)));
-                    parkingInfoFacade.edit(parkingInfo);
-                    parkingInfoFacade.refreshParkInfo();
-                }
+            TempTicket tTicket = tempTicketFacade.getLastCustomerTempTicket(sessionTicketData.getnPlate());
+            if(tTicket != null && tTicket.getExpire().getTime() < date.getTime() && tTicket.getTicketStatus().equals(SessionDataStatus.ONGOING_STATUS)){
+                tempTicketFacade.remove(tTicket);
+                tempTicketFacade.refreshTemp();
+                tTicket = null;
             }
-            
-            parkingInfo = new ParkingInfo(sessionTicketData.getnPlate(),
-                    date,
-                    null,
-                    null,
-                    sessionStatus.getInitTel(),
-                    sessionStatus.getSessionId(),
-                    userBean.getAgentZoneId()+"",
-                    date);
-            parkingInfoFacade.create(parkingInfo);
-            parkingInfoFacade.refreshParkInfo();
-            
             Ticket ticket = ticketFacade.getCustormerLastTicket(sessionTicketData.getnPlate());
             if(ticket != null){
                 
@@ -126,6 +111,25 @@ public class TicketManager {
                 
                 long durationMinutes = DataFactory.diffMinutes(startDate, endDate);
                 out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest a car with "+ticket.getNumberPlate()+" was parked in: "+ticket.getParkingDesc()+" by conductor: "+ticket.getConductorName()+" and Id: "+ticket.getConductorId()+" elapsed minutes from last ticket: "+durationMinutes+" minutes.");
+                
+                DateFormat formatter = new SimpleDateFormat("yyy-MM-dd");
+                
+                Calendar startCalendar = Calendar.getInstance();
+                startCalendar.setTime(ticket.getInDate());
+                
+                Calendar endCalendar = Calendar.getInstance();
+                endCalendar.setTime(date);
+                
+                Date startDate1 = formatter.parse(formatter.format(ticket.getInDate()));
+                
+                Date endDate1 = formatter.parse(formatter.format(date));
+                if(startDate1.getTime() == endDate1.getTime())
+                    if(ticket.getTicketStatus().equals(SessionDataStatus.ONGOING_STATUS) && (ticket.getMsisdn().equals(sessionStatus.getInitTel()))){
+                        out.print(AppDesc.APP_DESC+"Imodoka: "+ticket.getNumberPlate()+"Irimuri parkingi: "+ticket.getParkingDesc()+" Last ticket time: "+new SimpleDateFormat("yyy-MM-dd HH:mm:ss").format(ticket.getInDate()));
+                        return "Imodoka: "+ticket.getNumberPlate()+"^Irimuri parkingi: "+ticket.getParkingDesc();
+                    }
+                
+                updateParkingInfo(conductorNames, sessionStatus, userBean, sessionTicketData);
                 
                 if(ticket.getTicketStatus().equals(SessionDataStatus.ONGOING_STATUS)){
                     out.print(AppDesc.APP_DESC+"UssdProcessor receiveRequest an ongoing ticket for car with "+ticket.getNumberPlate()+" was parked in: "+ticket.getParkingDesc()+" by conductor: "+ticket.getConductorName()+" and Id: "+ticket.getConductorId()+" elapsed minutes from last ticket: "+durationMinutes+" minutes.");
@@ -142,17 +146,7 @@ public class TicketManager {
                     }
                 }
                 
-                DateFormat formatter = new SimpleDateFormat("yyy-MM-dd");
                 
-                Calendar startCalendar = Calendar.getInstance();
-                startCalendar.setTime(ticket.getInDate());
-                
-                Calendar endCalendar = Calendar.getInstance();
-                endCalendar.setTime(date);
-                
-                Date startDate1 = formatter.parse(formatter.format(ticket.getInDate()));
-                
-                Date endDate1 = formatter.parse(formatter.format(date));
                 
                 if(startDate1.getTime() == endDate1.getTime())
                     if(durationMinutes >= 0 && durationMinutes < 60){
@@ -161,10 +155,11 @@ public class TicketManager {
                         //                            return "Imodoka: "+ticket.getNumberPlate()+"^Iparitse: "+ticket.getParkingDesc()+"^Yashyizwemo: "+new SimpleDateFormat("yyy-MM-dd HH:mm:ss").format(ticket.getInDate());
                         //                        }
                         Calendar calendar = Calendar.getInstance();
-                        calendar.add(Calendar.MINUTE, (int) durationMinutes);
+                        calendar.add(Calendar.MINUTE, 60 - (int) durationMinutes);
                         
                         long nextReminder = (60 - durationMinutes)*60*1000;
                         
+                        if(tTicket != null && !tTicket.getTicketStatus().equals(SessionDataStatus.ONGOING_STATUS)){
                         TempTicket tempTicket = new TempTicket(sessionStatus.getSessionId(),
                                 sessionStatus.getInitTel(),
                                 userBean.getUserId()+"",
@@ -179,11 +174,12 @@ public class TicketManager {
                                 0);
                         tempTicketFacade.create(tempTicket);
                         tempTicketFacade.refreshTemp();
+                        }
                         
                         reminder(sessionStatus, nextReminder, calendar.getTime());
                         //return "SUCCESS";
-                        long nextTicket = 60 - durationMinutes;
-                        return "Imodoka: "+ticket.getNumberPlate()+"^Yariparitse: "+ticket.getParkingDesc()+"^Isigaje iminota: "+nextTicket+"^Yashyizwemo: "+new SimpleDateFormat("yyy-MM-dd HH:mm:ss").format(ticket.getInDate());
+                        //long nextTicket = 60 - durationMinutes;
+                        return "Imodoka: "+ticket.getNumberPlate()+"^Iraparitse: "+ticket.getParkingDesc()+"^Yashyizwemo: "+new SimpleDateFormat("yyy-MM-dd HH:mm:ss").format(ticket.getInDate());
                     }
             }
             Calendar calendar = Calendar.getInstance();
@@ -217,7 +213,7 @@ public class TicketManager {
             
             newTicketReminder(sessionStatus.getSessionId());
             
-            Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, ticket, SMSConfig.CAR_IN_MSG+ticket.getNumberPlate()+" "+ticket.getParkingDesc()+" / "+new SimpleDateFormat("yyy-MM-dd HH:mm:ss").format(calendar.getTime()), false));
+            Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider," "+ticket.getParkingDesc()+" / "+new SimpleDateFormat("yyy-MM-dd HH:mm:ss").format(new Date()), ActionConfig.CAR_IN_ACTION, ticket.getNumberPlate()));
             smsThread.start();
             
             return "SUCCESS";
@@ -225,6 +221,35 @@ public class TicketManager {
         } catch (Exception e) {
             out.print(AppDesc.APP_DESC+"TicketManager genNewTicket Failed to generate ticket due to: "+e.getMessage());
             return MenuMessage.TICKET_PROBLEM;
+        }
+    }
+    
+    private void updateParkingInfo(String conductorNames, SessionStatus sessionStatus, UserBean userBean, SessionTicketData sessionTicketData){
+        try {
+            DateFormat dFomat = new SimpleDateFormat("");
+            Date date = new Date();
+            ParkingInfo parkingInfo = parkingInfoFacade.getCustomerLastParkiInfo(sessionTicketData.getnPlate());
+            if(parkingInfo != null){
+                if(parkingInfo.getOutDate() == null){
+                    parkingInfo.setOutedBy(sessionStatus.getInitTel());
+                    parkingInfo.setOutDate(dFomat.parse(dFomat.format(date)));
+                    parkingInfoFacade.edit(parkingInfo);
+                    parkingInfoFacade.refreshParkInfo();
+                }
+            }
+            
+            parkingInfo = new ParkingInfo(sessionTicketData.getnPlate(),
+                    date,
+                    null,
+                    null,
+                    sessionStatus.getInitTel(),
+                    sessionStatus.getSessionId(),
+                    userBean.getAgentZoneId()+"",
+                    date);
+            parkingInfoFacade.create(parkingInfo);
+            parkingInfoFacade.refreshParkInfo();
+        } catch (Exception e) {
+            out.print(AppDesc.APP_DESC+"TicketManager updateParkingInfo update parking infor failed due to: "+e.getMessage());
         }
     }
     public boolean genNewTicket(ConductorBean conductorBean, ParkingBean parkingBean, String initmsisdn){
@@ -364,7 +389,7 @@ public class TicketManager {
             }
             
             DateFormat dateFormat = new SimpleDateFormat("yyy-MM-dd HH:mm:ss");
-            Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, oTicket, SMSConfig.CAR_OUT_MSG+oTicket.getNumberPlate()+" "+oTicket.getParkingDesc()+"/"+dateFormat.format(date), false));
+            Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider," "+oTicket.getParkingDesc()+" / "+new SimpleDateFormat("yyy-MM-dd HH:mm:ss").format(new Date()), ActionConfig.CAR_OUT_ACTION, oTicket.getNumberPlate()));
             smsThread.start();
             
             MyJob mJob = new MyJob();
@@ -437,7 +462,7 @@ public class TicketManager {
                 parkingInfoFacade.refreshParkInfo();
             }
             
-            Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider, oTicket, SMSConfig.CAR_ADDED_VALUE+" isaha "+elapsedTime+" (z)irashize, hour(s) elapsed, heure(s) ecoule "+oTicket.getNumberPlate()+" / "+oTicket.getParkingDesc(), false));
+            Thread smsThread = new Thread(new BackgroundSMS(smsSender, customerProvider," "+oTicket.getParkingDesc()+" / "+new SimpleDateFormat("yyy-MM-dd HH:mm:ss").format(new Date()), ActionConfig.CAR_ADDITIONAL_TICKET, oTicket.getNumberPlate()));
             smsThread.start();
             
             if(!oTicket.isRecorded()){
@@ -528,7 +553,7 @@ public class TicketManager {
     private void ticketSchedule(String sessionId){
         out.print(AppDesc.APP_DESC+"TicketManager ticketSchedule generating ticket reminder for sessionId: "+ sessionId);
         Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.HOUR, 5);
+        calendar.add(Calendar.HOUR, 4);
         MyFrequency myFrequency = new MyFrequency("minute", "3600000");
         List<JobTasks> mTasks = new ArrayList<>();
         JobTasks jobTasks = new JobTasks(sessionId,

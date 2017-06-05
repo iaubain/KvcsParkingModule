@@ -86,12 +86,28 @@ public class WebService {
         return appReceiver.tNotification(requestContext.getRemoteAddr(), requestContext.getRemotePort(), headers, body);//.clientReceiver(headers, body);
     }
     
-    @GET
+    @POST
     @Path("/getAllTickets")
     public Response getAllTickets(@Context HttpServletRequest requestContext, @Context HttpHeaders headers, String body){
         out.print(AppDesc.APP_DESC+" Source IP: " + requestContext.getRemoteAddr() + ", Port: " + requestContext.getRemotePort() + ", Host: " + requestContext.getRemoteHost());
         out.print(AppDesc.APP_DESC+" Node Received Headers "+headers.toString()+" and Body  "+body);
         return appReceiver.getAllTickets(requestContext.getRemoteAddr(), requestContext.getRemotePort(), headers, body);//.clientReceiver(headers, body);
+    }
+    
+    @POST
+    @Path("/verify")
+    public Response verifyCar(@Context HttpServletRequest requestContext, @Context HttpHeaders headers, String body){
+        out.print(AppDesc.APP_DESC+" Source IP: " + requestContext.getRemoteAddr() + ", Port: " + requestContext.getRemotePort() + ", Host: " + requestContext.getRemoteHost());
+        out.print(AppDesc.APP_DESC+" Node Received Headers "+headers.toString()+" and Body  "+body);
+        return appReceiver.verifyCar(requestContext.getRemoteAddr(), requestContext.getRemotePort(), headers, body);//.clientReceiver(headers, body);
+    }
+    
+    @POST
+    @Path("/verifyReport")
+    public Response verifyReport(@Context HttpServletRequest requestContext, @Context HttpHeaders headers, String body){
+        out.print(AppDesc.APP_DESC+" Source IP: " + requestContext.getRemoteAddr() + ", Port: " + requestContext.getRemotePort() + ", Host: " + requestContext.getRemoteHost());
+        out.print(AppDesc.APP_DESC+" Node Received Headers "+headers.toString()+" and Body  "+body);
+        return appReceiver.verifyCarReport(requestContext.getRemoteAddr(), requestContext.getRemotePort(), headers, body);//.clientReceiver(headers, body);
     }
     
     @GET

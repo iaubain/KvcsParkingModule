@@ -41,6 +41,7 @@ public class TicketFactory {
     }
     
     public TicketBean genTicketBean(Ticket ticket){
+        DateFormat dFormat = new SimpleDateFormat("yyy-MM-dd HH:mm:ss");
         return new TicketBean(ticket.getTicketId(),
                 ticket.getParkingId(),
                 ticket.getParkingDesc(),
@@ -50,8 +51,8 @@ public class TicketFactory {
                 ticket.getNumberPlate(),
                 ticket.getCarBrand() != null?ticket.getCarBrand():"",
                 ticket.getTicketType() != null?ticket.getTicketType():"100",
-                ticket.getInDate() != null?ticket.getInDate().toString():"",
-                ticket.getOutDate() != null?ticket.getOutDate().toString():"");
+                ticket.getInDate() != null?dFormat.format(ticket.getInDate()):"",
+                ticket.getOutDate() != null?dFormat.format(ticket.getOutDate()):"");
     }
     
     public PublishTicketRequest genTicketToPublish(Ticket ticket){

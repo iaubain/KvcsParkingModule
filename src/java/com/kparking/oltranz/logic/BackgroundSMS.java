@@ -20,11 +20,11 @@ public class BackgroundSMS  implements Runnable{
             SmsSender smsSender;
     @EJB
             CustomerProvider customerProvider;
-    Ticket ticket;
-    
-    String message;
-    
-    boolean isConductor;
+    Ticket ticket;    
+    String message;    
+    boolean isConductor;    
+    String action;
+    String numberPlate;
     
     public BackgroundSMS(SmsSender smsSender, CustomerProvider customerProvider, Ticket ticket, String message, boolean isConductor) {
         this.smsSender = smsSender;
@@ -32,6 +32,14 @@ public class BackgroundSMS  implements Runnable{
         this.ticket = ticket;
         this.message = message;
         this.isConductor = isConductor;
+    }
+
+    public BackgroundSMS(SmsSender smsSender, CustomerProvider customerProvider, String message, String action, String numberPlate) {
+        this.smsSender = smsSender;
+        this.customerProvider = customerProvider;
+        this.message = message;
+        this.action = action;
+        this.numberPlate = numberPlate;
     }
     
     @Override
@@ -48,7 +56,12 @@ public class BackgroundSMS  implements Runnable{
             }
         }else{
             try{
-                out.print(AppDesc.APP_DESC+"BackgroundSMS exec sending SMS failed due to: Sending SMS to customer disabled");
+                out.print(AppDesc.APP_DESC+"BackgroundSMS exec: Sending SMS to customer");
+                if(customerProvider.genCustomerSms(numberPlate, action, message)){
+                    out.print(AppDesc.APP_DESC+"BackgroundSMS exec Customerprovided returned positive result");
+                }else{
+                    out.print(AppDesc.APP_DESC+"BackgroundSMS exec Customerprovided results in possible faillure");
+                }
                 //smsSender.send(customerProvider.genMsisdn(ticket.getNumberPlate(), ticket.getMsisdn()), message);
             }catch(Exception e){
                 out.print(AppDesc.APP_DESC+"BackgroundSMS exec sending SMS failed due to: "+e.getMessage());

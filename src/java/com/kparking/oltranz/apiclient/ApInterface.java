@@ -11,6 +11,7 @@ import com.kparking.oltranz.config.KpmCmdConfig;
 import com.kparking.oltranz.config.SchedCommandConfig;
 import com.kparking.oltranz.simplebeans.commonbeans.ConductorTel;
 import com.kparking.oltranz.simplebeans.commonbeans.RequestGetElementById;
+import com.kparking.oltranz.simplebeans.commonbeans.StatusBean;
 import com.kparking.oltranz.simplebeans.conductors.ResponseConductor;
 import com.kparking.oltranz.simplebeans.schedule.CancelSceduledJob;
 import com.kparking.oltranz.simplebeans.schedule.MyJob;
@@ -19,6 +20,7 @@ import com.kparking.oltranz.simplebeans.ticketsreport.PublishTicketRequest;
 import com.kparking.oltranz.simplebeans.ticketsreport.PublishTicketResponse;
 import com.kparking.oltranz.simplebeans.validation.RequestValidation;
 import com.kparking.oltranz.simplebeans.validation.ResponseValidation;
+import com.kparking.oltranz.simplebeans.verification.ResponseUserDetails;
 import com.kparking.oltranz.utilities.DataFactory;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -59,6 +61,61 @@ public class ApInterface {
                 headers,
                 DataFactory.objectToString(new RequestGetElementById(conductorId)),
                 MediaType.APPLICATION_JSON, null); 
+    }
+    
+    public String getParkingConductor(String parkingId){
+        headers = new MultivaluedHashMap<>();
+        headers.putSingle(HeaderConfig.CONTENT, MediaType.APPLICATION_JSON);
+        headers.putSingle(HeaderConfig.CMD, KpmCmdConfig.GET_DEPLOYEE_DEP);
+        headers.putSingle(HeaderConfig.CONTRACT, ApiConfig.KPM_CONTRACT);
+        
+        return (String) openExternal.goGet(ApiConfig.GET_PARKING_USERS+parkingId,
+                headers,
+                MediaType.APPLICATION_JSON, null); 
+    }
+    
+    public String getCarBalance(String numberPlate){
+        headers = new MultivaluedHashMap<>();
+        headers.putSingle(HeaderConfig.CONTENT, MediaType.WILDCARD);
+        headers.putSingle(HeaderConfig.CMD, ApiConfig.GET_CAR_BALANCE_CMD);        
+        headers.putSingle(HeaderConfig.DOMAIN, ApiConfig.CAR_ACCOUNT_DOMAIN);
+        
+        return (String) openExternal.doPost(ApiConfig.REQUEST_CAR_BALANCE,
+                headers,
+                numberPlate,
+                MediaType.WILDCARD, null); 
+    }
+    
+    public String getCarContact(String numberPlate){
+        headers = new MultivaluedHashMap<>();
+        headers.putSingle(HeaderConfig.CONTENT, MediaType.WILDCARD);
+        headers.putSingle(HeaderConfig.CMD, ApiConfig.GET_CONTACT_CMD);        
+        headers.putSingle(HeaderConfig.DOMAIN, ApiConfig.CAR_ACCOUNT_DOMAIN);
+        
+        return (String) openExternal.doPost(ApiConfig.GET_NUMBERPLATE_CONTACT,
+                headers,
+                numberPlate,
+                MediaType.WILDCARD, null); 
+    }
+    
+    public StatusBean verifyCar(String body){
+        headers = new MultivaluedHashMap<>();
+        headers.putSingle(HeaderConfig.CONTENT, MediaType.APPLICATION_JSON);
+        
+        return (StatusBean) openExternal.doPost(ApiConfig.CAR_VERIFICATION,
+                headers,
+                body,
+                MediaType.WILDCARD, StatusBean.class); 
+    }
+    
+    public ResponseUserDetails getUser(String body){
+        headers = new MultivaluedHashMap<>();
+        headers.putSingle(HeaderConfig.CONTENT, MediaType.APPLICATION_JSON);
+        
+        return (ResponseUserDetails) openExternal.doPost(ApiConfig.GET_SYSTEM_USER,
+                headers,
+                body,
+                MediaType.WILDCARD, ResponseUserDetails.class); 
     }
     
     public String createSchedule(MyJob mJob){

@@ -19,7 +19,7 @@ public class ApiConfig {
     
     public static final int SMS_CONTRACT = 15603452;
     public static final String SMS_SIGNATURE = "648eb83555bab00b3f732e19ce65126f";
-    public static final String SMS_URL = "http://10.171.1.50:8080/SMSServiceProvider/sendSMS";
+    public static final String SMS_URL = "http://41.74.172.132:8080/SMSServiceProvider/sendSMS";
     
     public static final String CALLBACK_URL = "http://localhost:8080/Kparking/system/schedCallBack";
     public static final String PROGRESS_CALLBACK_URL = "http://localhost:8080/Kparking/system/progressCallBack";
@@ -31,7 +31,20 @@ public class ApiConfig {
     
     public static final String PUBLISH_TICKET_CMD = "001";
     public static final String PUBLISH_TICKET_DOMAIN = "kvcsServices";
-    public static final String PUBLISH_TICKET = "http://10.171.1.50:8080/RequestsDispatcher/RequestsHandler";
+    public static final String PUBLISH_TICKET = "http://localhost:8080/KVCSParkingTicketsManager/TicketsManager/loadTicket";
     
-     public static final String VALIDATE_NUMBER_PLATE = "http://localhost:8080/KVCSValidator/NumberPlateValdation";
+    public static final String VALIDATE_NUMBER_PLATE = "http://localhost:8080/KVCSValidator/NumberPlateValdation";
+    
+    public static final String GET_PARKING_USERS = "http://localhost:8080/KVCSUsersManager/FieldsOpsAgents/fieldAgentsByParkingId/";
+    //public static final String GET_PARKING_USERS = "http://41.74.172.131:8080/RequestsDispatcherV2/RequestsHandler";//http://41.74.172.131:8080/RequestsDispatcherV2/RequestsHandler
+    public static final String CAR_ACCOUNT_DOMAIN = "KvcsAccounts";
+    public static final String GET_CONTACT_CMD = "012";
+    //public static final String GET_NUMBERPLATE_CONTACT = "http://localhost:8080/KVCSMotorsAccountsManager/MotorsContacts/getListPerNumberPlate/";
+    public static final String GET_NUMBERPLATE_CONTACT = "http://41.74.172.131:8080/RequestsDispatcherV2/RequestsHandler";// for kvcs server http://41.74.172.131:8080/RequestsDispatcherV2/RequestsHandler for Oltranz http://localhost:8080/RequestsDispatcherV2/RequestsHandler
+    public static final String GET_CAR_BALANCE_CMD = "013";
+    public static final String REQUEST_CAR_BALANCE = "http://41.74.172.131:8080/RequestsDispatcherV2/RequestsHandler";
+    
+    public static final String CAR_VERIFICATION = "http://localhost:8080/Kparking/system/verify";
+    
+    public static final String GET_SYSTEM_USER = "http://localhost:8080/KVCSUsersManager/UserManagementService/userByMsisdn";
 }

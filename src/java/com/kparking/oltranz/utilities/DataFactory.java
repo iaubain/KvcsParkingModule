@@ -275,6 +275,7 @@ public class DataFactory {
         out.print(AppDesc.APP_DESC+"DataFactory numberPlateValidator NO MATCH for: "+numberPlate);
         return false;
     }
+    
     private static long elapsed(Date startDate, Date endDate) {
         long diffMills = endDate.getTime() - startDate.getTime();
         return (diffMills/1000)/60;

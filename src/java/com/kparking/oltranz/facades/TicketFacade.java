@@ -196,6 +196,40 @@ public class TicketFacade extends AbstractFacade<Ticket> {
         }
     }
     
+    public Ticket verifyCar(String parkingId, String numberPlate){
+        try {
+            if(parkingId == null || numberPlate == null){
+                out.print(AppDesc.APP_DESC+"TicketFacade verifyCar go empty params");
+                return null;
+            }
+            Query q= em.createQuery("Select T from Ticket T WHERE T.numberPlate = :numberPlate AND T.parkingId = :parkingId ORDER BY T.id DESC");
+            q.setParameter("numberPlate", numberPlate)
+                    .setParameter("parkingId", parkingId);
+            return (Ticket) q.getResultList().get(0);
+        } catch (Exception e) {
+            e.printStackTrace(out);
+            return null;
+        }
+    }
+    
+    public List<Ticket> getTicketPerDate(Date startDate, Date endDate){
+        try{
+            if(startDate == null || endDate == null){
+                out.print(AppDesc.APP_DESC+"TicketFacade getTicketPerDate got an empty date range");
+                return null;
+            }
+            Query q= em.createQuery("Select T from Ticket T WHERE T.inDate >= :startDate AND T.inDate <= :endDate ORDER BY T.id DESC");
+            q.setParameter("startDate", startDate)
+                    .setParameter("endDate", endDate);
+            List<Ticket> list = (List<Ticket>)q.getResultList();
+            
+            return list.isEmpty() ? null : list;
+        }catch(Exception ex){
+            ex.printStackTrace(out);
+            return null;
+        }
+    }
+    
     public Long getParkingCarCount(Date startDate, Date endDate, String parkingId){
         try{
             if(parkingId.isEmpty()){

@@ -7,12 +7,18 @@ package com.kparking.oltranz.logic;
 
 import com.kparking.oltranz.config.AppDesc;
 import com.kparking.oltranz.entities.Ticket;
+import com.kparking.oltranz.entities.Verification;
 import com.kparking.oltranz.facades.TicketFacade;
+import com.kparking.oltranz.facades.VerificationFacade;
+import com.kparking.oltranz.simplebeans.commonbeans.DateRangeBean;
 import com.kparking.oltranz.simplebeans.ussdbeans.UssdRequest;
 import com.kparking.oltranz.utilities.DataFactory;
 import com.kparking.oltranz.utilities.ReturnConfig;
 import com.kparking.oltranz.utilities.TicketFactory;
 import static java.lang.System.out;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -33,6 +39,10 @@ public class AppProcessor {
             TicketFacade ticketFacade;
     @EJB
             TicketFactory ticketFactory;
+    @EJB
+            VerificationFacade verificationFacade;
+    @EJB
+            SmsSender smsSender;
     
     public Response carInprocessor(HttpHeaders headers, String body){
         try{
@@ -94,19 +104,61 @@ public class AppProcessor {
         }
     }
     
-    public Response getAllTickets(){
+    public Response verifyCar(String body){
         try{
-            List<Ticket> mTickets = ticketFacade.getAllTickets();
+            out.print(AppDesc.APP_DESC+"received from verifier app: "+body);
+            return ussdProcessor.verifyCar(body);
+        }catch(Exception e){
+            out.print(AppDesc.APP_DESC+"failed to process request due to: "+e.getMessage());
+            return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Bad format.");
+        }
+    }
+    
+    public Response getAllTickets(String body){
+        try{
+            DateRangeBean dateRangeBean = (DateRangeBean)DataFactory.stringToObject(DateRangeBean.class, body);
+            if(dateRangeBean == null){
+                out.print(AppDesc.APP_DESC+" AppProcessor getAllTicktes failed to process request due to: empty request date range");
+                return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Empty request date range");
+            }
+            DateFormat dFormat = new SimpleDateFormat("yyy-MM-dd HH:mm:ss");
+            Date startDate = dFormat.parse(dateRangeBean.getStartDate());
+            Date endDate = dFormat.parse(dateRangeBean.getEndDate());
+            List<Ticket> mTickets = ticketFacade.getTicketPerDate(startDate, endDate);
             String outPut = ticketFactory.tuneTicketList(mTickets);
             if(outPut != null){
                 out.print(AppDesc.APP_DESC+" AppProcessor getAllTicktes succeeded with outPut: "+outPut);
                 return ReturnConfig.isSuccess(outPut);
             }
             out.print(AppDesc.APP_DESC+" AppProcessor getAllTicktes failed to process request due to: null result");
-            return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Expectation failed.");
+            return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Expectation failed due to empty result.");
         }catch(Exception e){
             out.print(AppDesc.APP_DESC+" AppProcessor getAllTicktes failed to process request due to: "+e.getMessage());
-            return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Expectation failed.");
-        }        
+            return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, ""+ e.getMessage());
+        }
+    }
+    
+    public Response verifyCarReport(String body){
+        try{
+            DateRangeBean dateRangeBean = (DateRangeBean)DataFactory.stringToObject(DateRangeBean.class, body);
+            if(dateRangeBean == null){
+                out.print(AppDesc.APP_DESC+" AppProcessor getAllTicktes failed to process request due to: empty request date range");
+                return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Empty request date range");
+            }
+            DateFormat dFormat = new SimpleDateFormat("yyy-MM-dd HH:mm:ss");
+            Date startDate = dFormat.parse(dateRangeBean.getStartDate());
+            Date endDate = dFormat.parse(dateRangeBean.getEndDate());
+            List<Verification> mVerifications = verificationFacade.getTicketPerDate(startDate, endDate);
+            String outPut = DataFactory.objectToString(mVerifications);
+            if(outPut != null){
+                out.print(AppDesc.APP_DESC+" AppProcessor getAllTicktes succeeded with outPut: "+outPut);
+                return ReturnConfig.isSuccess(outPut);
+            }
+            out.print(AppDesc.APP_DESC+" AppProcessor getAllTicktes failed to process request due to: null result");
+            return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Expectation failed due to empty result.");
+        }catch(Exception e){
+            out.print(AppDesc.APP_DESC+" AppProcessor getAllTicktes failed to process request due to: "+e.getMessage());
+            return ReturnConfig.isFailed(Response.Status.EXPECTATION_FAILED, "Error: "+ e.getMessage());
+        }
     }
 }

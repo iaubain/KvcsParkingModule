@@ -220,9 +220,9 @@ public class CallBackHandler {
                     }
                 }
             }
-            String result = ticketManager.genTicket(sessionStatus, userBean, sessionTicketData);
             tempTicketFacade.remove(tempTicket);
             tempTicketFacade.refreshTemp();
+            String result = ticketManager.genTicket(sessionStatus, userBean, sessionTicketData);            
             out.print(AppDesc.APP_DESC+"CallBackHandler tempTicket succeeded to new ticket from temp ticket SessionId: "+sessionId+" ticketManager result: "+result);
             return ReturnConfig.isSuccess("Success");
         } catch (Exception e) {
