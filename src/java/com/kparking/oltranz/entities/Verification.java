@@ -38,7 +38,7 @@ public class Verification implements Serializable {
     private String numberPlate;
     @Column(name="conductorId", length = 522, nullable = false)
             private String conductorId;
-    @Column(name="conductorNames", length = 30, nullable = true)
+    @Column(name="conductorNames", length = 225, nullable = true)
             private String conductorNames;
     @Column(name="verifiedOn", nullable = false)
     @Temporal(javax.persistence.TemporalType.TIMESTAMP)

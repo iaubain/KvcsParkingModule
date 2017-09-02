@@ -14,6 +14,7 @@ import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
+import net.manzi.frs.config.SessionDataStatus;
 
 /**
  *
@@ -42,6 +43,31 @@ public class TicketFacade extends AbstractFacade<Ticket> {
     public List<Ticket> getAllTickets(){
          try{
             Query q= em.createQuery("Select T from Ticket T ORDER BY T.id DESC");
+            List<Ticket> list = (List<Ticket>)q.getResultList();
+                return list;
+        }catch(Exception ex){
+            ex.printStackTrace(out);
+            return null;
+        }
+    }
+    
+    public List<Ticket> getCurrentTicket(){
+         try{
+            Query q= em.createQuery("Select T from Ticket T WHERE T.ticketStatus = :ticketStatus ORDER BY T.id DESC");
+            q.setParameter("ticketStatus", SessionDataStatus.ONGOING_STATUS);
+            List<Ticket> list = (List<Ticket>)q.getResultList();
+                return list;
+        }catch(Exception ex){
+            ex.printStackTrace(out);
+            return null;
+        }
+    }
+    
+    public List<Ticket> getCurrentTicket(String cDate){
+         try{
+            Query q= em.createQuery("Select T from Ticket T WHERE T.ticketStatus = :ticketStatus AND T.inDate >= :cDate ORDER BY T.id DESC");
+            q.setParameter("ticketStatus", SessionDataStatus.ONGOING_STATUS)
+                    .setParameter("cDate", cDate);
             List<Ticket> list = (List<Ticket>)q.getResultList();
                 return list;
         }catch(Exception ex){
@@ -87,6 +113,20 @@ public class TicketFacade extends AbstractFacade<Ticket> {
                 return null;
             Query q= em.createQuery("Select T from Ticket T WHERE T.numberPlate = :nPlate");
             q.setParameter("nPlate", nPlate);
+            List<Ticket> list = (List<Ticket>)q.getResultList();
+            return list.isEmpty()?null:list;
+        }catch(Exception ex){
+            ex.printStackTrace(out);
+            return null;
+        }
+    }
+    
+    public List<Ticket> getTicketBySessionId(String sessionId){
+        try{
+            if(sessionId.isEmpty())
+                return null;
+            Query q= em.createQuery("Select T from Ticket T WHERE T.sessionId = :sessionId");
+            q.setParameter("sessionId", sessionId);
             List<Ticket> list = (List<Ticket>)q.getResultList();
             return list.isEmpty()?null:list;
         }catch(Exception ex){

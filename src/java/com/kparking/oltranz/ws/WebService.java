@@ -7,6 +7,7 @@ package com.kparking.oltranz.ws;
 
 import com.kparking.oltranz.config.AppDesc;
 import com.kparking.oltranz.logic.AppReceiver;
+import com.kparking.oltranz.logic.CurrentCar;
 import com.kparking.oltranz.logic.DependencyProcessor;
 import static java.lang.System.out;
 import javax.ejb.EJB;
@@ -30,6 +31,8 @@ public class WebService {
             AppReceiver appReceiver;
     @EJB
             DependencyProcessor dependencyProcessor;
+    @EJB
+            CurrentCar currentCar;
     @POST
     @Path("/ussdCarIn")
     public Response ussdCarIn(@Context HttpServletRequest requestContext, @Context HttpHeaders headers, String body){
@@ -76,6 +79,22 @@ public class WebService {
         out.print(AppDesc.APP_DESC+" Source IP: " + requestContext.getRemoteAddr() + ", Port: " + requestContext.getRemotePort() + ", Host: " + requestContext.getRemoteHost());
         out.print(AppDesc.APP_DESC+" Node Received Headers "+headers.toString()+" and Body  "+body);
         return appReceiver.tempTicket(requestContext.getRemoteAddr(), requestContext.getRemotePort(), headers, body);//.clientReceiver(headers, body);
+    }
+    
+    @GET
+    @Path("/currentCar")
+    public Response getCurrentCar(@Context HttpServletRequest requestContext, @Context HttpHeaders headers, String body){
+        out.print(AppDesc.APP_DESC+" Source IP: " + requestContext.getRemoteAddr() + ", Port: " + requestContext.getRemotePort() + ", Host: " + requestContext.getRemoteHost());
+        out.print(AppDesc.APP_DESC+" Node Received Headers "+headers.toString()+" and Body  "+body);
+        return currentCar.getCurrentCar();//.clientReceiver(headers, body);
+    }
+    
+    @POST
+    @Path("/inParking")
+    public Response inParking(@Context HttpServletRequest requestContext, @Context HttpHeaders headers, String body){
+        out.print(AppDesc.APP_DESC+" Source IP: " + requestContext.getRemoteAddr() + ", Port: " + requestContext.getRemotePort() + ", Host: " + requestContext.getRemoteHost());
+        out.print(AppDesc.APP_DESC+" Node Received Headers "+headers.toString()+" and Body  "+body);
+        return currentCar.getCurrentCarPerDate(body);//.clientReceiver(headers, body);
     }
     
     @GET
